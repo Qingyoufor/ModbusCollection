@@ -1,6 +1,6 @@
 # ModbusMonitor
 
-一个面向工业现场的**设备数据采集与监控系统**（SCADA 简化版），通过 Modbus RTU 协议从 PLC/仪器采集实时数据，提供实时监控、报警检测、历史趋势、系统配置等功能。包含 ASP.NET Core Web API 后端与 WPF 桌面客户端。
+一个 Modbus 从站数据采集与监控系统：作为 Modbus RTU 主站轮询从站（Slave）寄存器采集实时数据，提供实时监控、报警检测、历史趋势、系统配置等功能。包含 ASP.NET Core Web API 后端与 WPF 桌面客户端。
 
 ## 功能特性
 
