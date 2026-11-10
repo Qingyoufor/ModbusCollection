@@ -1,4 +1,5 @@
 using Client.Infrastructure;
+using Client.Models;
 using Client.Models.Dtos;
 using Client.Service;
 using System.Collections.ObjectModel;
@@ -10,6 +11,10 @@ namespace Client.Modules.DeviceManagement.ViewModels
     public class DeviceEditViewModel : BindableBase, IDialogAware
     {
         private readonly IDeviceService _deviceService;
+        private readonly IDataPointService _dataPointService;
+
+        /// <summary>编辑模式下被用户删除的已有测点 Id，保存时统一提交删除</summary>
+        private readonly List<int> _deletedPointIds = new();
 
         private string _name = string.Empty;
         private string _code = string.Empty;
@@ -23,13 +28,34 @@ namespace Client.Modules.DeviceManagement.ViewModels
 
         public AsyncDelegateCommand SaveCommand { get; }
         public DelegateCommand CancelCommand { get;}
+        public DelegateCommand AddPointCommand { get; }
+        public DelegateCommand<DataPointEditModel> DeletePointCommand { get; }
 
-        public DeviceEditViewModel(IDeviceService deviceService)
+        public ObservableCollection<DataPointEditModel> DataPoints { get; } = new();
+
+        public IReadOnlyList<EnumOption<RegisterType>> RegisterTypeOptions { get; } = new List<EnumOption<RegisterType>>
+        {
+            new(RegisterType.HoldingRegister, "保持寄存器 (03)"),
+            new(RegisterType.InputRegister, "输入寄存器 (04)")
+        };
+
+        public IReadOnlyList<EnumOption<DataPointType>> DataTypeOptions { get; } = new List<EnumOption<DataPointType>>
+        {
+            new(DataPointType.Int16, "Int16"),
+            new(DataPointType.UInt16, "UInt16"),
+            new(DataPointType.Int32, "Int32"),
+            new(DataPointType.Float, "Float")
+        };
+
+        public DeviceEditViewModel(IDeviceService deviceService, IDataPointService dataPointService)
         {
             _deviceService = deviceService;
+            _dataPointService = dataPointService;
 
             CancelCommand = new DelegateCommand(ExcuteCancel);
             SaveCommand = new AsyncDelegateCommand(ExcuteSave);
+            AddPointCommand = new DelegateCommand(ExcuteAddPoint);
+            DeletePointCommand = new DelegateCommand<DataPointEditModel>(ExcuteDeletePoint);
         }
 
         // ====== IDialogAware 实现 ========
@@ -55,10 +81,18 @@ namespace Client.Modules.DeviceManagement.ViewModels
                 return;
             }
 
-            bool success;
+            var newPoints = DataPoints.Where(p => p.IsNew).ToList();
+            if (newPoints.Any(p => string.IsNullOrWhiteSpace(p.Name)))
+            {
+                ErrorMessage = "测点名称不能为空";
+                HasError = true;
+                return;
+            }
+
+            int deviceId = _editId;
             if (_editId > 0)   // 有Id，编辑device模式
             {
-                success = await _deviceService.UpdateAsync(_editId, new UpdateDeviceRequest
+                bool updated = await _deviceService.UpdateAsync(_editId, new UpdateDeviceRequest
                 {
                     Name = Name,
                     Code = Code,
@@ -66,10 +100,17 @@ namespace Client.Modules.DeviceManagement.ViewModels
                     ComPort = ComPort,
                     Description = Description
                 });
+
+                if (!updated)
+                {
+                    _hasError = true;
+                    ErrorMessage = "保存失败，请检查数据或网络连接";
+                    return;
+                }
             }
             else     // 创建device模式
             {
-                success = await _deviceService.CreateAsync(new CreateDeviceRequest
+                var created = await _deviceService.CreateAsync(new CreateDeviceRequest
                 {
                     Name = Name,
                     Code = Code,
@@ -77,18 +118,53 @@ namespace Client.Modules.DeviceManagement.ViewModels
                     ComPort = ComPort,
                     Description = Description
                 });
+
+                if (created == null)
+                {
+                    _hasError = true;
+                    ErrorMessage = "保存失败，请检查数据或网络连接";
+                    return;
+                }
+
+                deviceId = created.Id;
             }
 
-            if (success)
+            if (!await SaveDataPointsAsync(deviceId, newPoints))
             {
-                RequestClose.Invoke(new DialogResult(ButtonResult.OK));  
-            }
-            else
-            {
-                _hasError = true;
-                ErrorMessage = "保存失败，请检查数据或网络连接";
+                return;
             }
 
+            RequestClose.Invoke(new DialogResult(ButtonResult.OK));
+        }
+
+        /// <summary>先删除标记的测点，再逐条创建新增的测点；任一步失败就在弹窗里提示，不关闭界面</summary>
+        private async Task<bool> SaveDataPointsAsync(int deviceId, List<DataPointEditModel> newPoints)
+        {
+            foreach (int pointId in _deletedPointIds)
+            {
+                if (!await _dataPointService.DeleteAsync(pointId))
+                {
+                    ErrorMessage = "设备已保存，但有测点删除失败，请重试";
+                    HasError = true;
+                    return false;
+                }
+            }
+            _deletedPointIds.Clear();
+
+            // 新测点的排序号接在已有测点之后，避免编辑模式下从 1 重排、与已有测点重复
+            int baseSortOrder = DataPoints.Where(p => !p.IsNew).Select(p => p.SortOrder).DefaultIfEmpty(0).Max();
+
+            for (int i = 0; i < newPoints.Count; i++)
+            {
+                if (!await _dataPointService.CreateAsync(deviceId, newPoints[i].ToCreateRequest(baseSortOrder + i + 1)))
+                {
+                    ErrorMessage = $"设备已保存，但测点「{newPoints[i].Name}」创建失败";
+                    HasError = true;
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         // 自定义加载方法,避免 async void OnDialogOpened，出现异常时不抛出异常
@@ -105,6 +181,17 @@ namespace Client.Modules.DeviceManagement.ViewModels
                     SlaveAddress = device.SlaveAddress;
                     ComPort = device.ComPort;
                     Description = device.Description;
+
+                    RaisePropertyChanged(nameof(DialogTitle));
+
+                    var points = await _dataPointService.GetByDeviceIdAsync(device.Id);
+                    if (points != null)
+                    {
+                        foreach (var point in points)
+                        {
+                            DataPoints.Add(DataPointEditModel.FromDto(point));
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -115,12 +202,30 @@ namespace Client.Modules.DeviceManagement.ViewModels
             }
         }
 
+        private void ExcuteAddPoint()
+        {
+            DataPoints.Add(new DataPointEditModel { IsNew = true });
+        }
+
+        private void ExcuteDeletePoint(DataPointEditModel? point)
+        {
+            if (point == null) return;
+
+            if (!point.IsNew)
+            {
+                _deletedPointIds.Add(point.Id);
+            }
+            DataPoints.Remove(point);
+        }
+
         private void ExcuteCancel()
         {
             RequestClose.Invoke(new DialogResult(ButtonResult.Cancel));
         }
 
         #region 属性
+        public string DialogTitle => _editId > 0 ? "编辑设备" : "新增设备";
+
         public string Name
         {
             get => _name;

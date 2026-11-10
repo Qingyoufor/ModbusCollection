@@ -30,6 +30,7 @@ namespace Client
             containerRegistry.RegisterSingleton<IAuthService,AuthService>();
             containerRegistry.RegisterSingleton<IShellService,ShellService>();
             containerRegistry.RegisterSingleton<IDeviceService,DeviceService>();
+            containerRegistry.RegisterSingleton<IDataPointService, DataPointService>();
             containerRegistry.RegisterSingleton<IRealtimeService,RealtimeService>();
             containerRegistry.RegisterSingleton<IAlarmService, AlarmService>();
             containerRegistry.RegisterSingleton<IHistoryService, HistoryService>();

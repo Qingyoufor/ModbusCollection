@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题 -->
-        <TextBlock Grid.Row="0" Text="智能工厂监控系统" 
+        <TextBlock Grid.Row="0" Text="Modbus" 
                    FontSize="20" FontWeight="Bold"
                    HorizontalAlignment="Center" Margin="0,0,0,20" />
 

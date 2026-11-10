@@ -14,5 +14,6 @@
         public double? AlarmLow { get; set; }
         public double ScaleFactor { get; set; }
         public int DecimalPlaces { get; set; }
+        public int SortOrder { get; set; }
     }
 }

@@ -4,67 +4,149 @@
         xmlns:prism="http://prismlibrary.com/"
         prism:ViewModelLocator.AutoWireViewModel="True"
         Background="White"
-        Height="500" Width="600">
+        Height="620" Width="820">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 标题 -->
-        <TextBlock Grid.Row="0" Text="设备信息" 
+        <TextBlock Grid.Row="0" Text="{Binding DialogTitle}" 
                    FontSize="18" FontWeight="Bold" 
                    HorizontalAlignment="Center" Margin="0,0,0,15" />
 
-        <!-- 设备名称 -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,10">
-            <TextBlock Text="设备名称:" Margin="0,0,0,5" />
-            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="28" Padding="5" />
-        </StackPanel>
+        <!-- 设备信息：左标签、右输入 -->
+        <Grid Grid.Row="1" Margin="0,0,0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- 设备编码 -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,10">
-            <TextBlock Text="设备编码:" Margin="0,0,0,5" />
-            <TextBox Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="28" Padding="5" />
-        </StackPanel>
+            <TextBlock Grid.Row="0" Text="设备名称:" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" Margin="0,0,10,10" />
+            <TextBox Grid.Row="0" Grid.Column="1" Height="28" Padding="5" Margin="0,0,0,10"
+                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
 
-        <!-- 从站地址 -->
-        <StackPanel Grid.Row="4" Margin="0,0,0,10">
-            <TextBlock Text="从站地址 (1-247):" Margin="0,0,0,5" />
-            <TextBox Text="{Binding SlaveAddress, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="28" Padding="5" />
-        </StackPanel>
+            <TextBlock Grid.Row="1" Text="设备编码:" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" Margin="0,0,10,10" />
+            <TextBox Grid.Row="1" Grid.Column="1" Height="28" Padding="5" Margin="0,0,0,10"
+                     Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" />
 
-        <!-- COM 端口 -->
-        <StackPanel Grid.Row="5" Margin="0,0,0,10">
-            <TextBlock Text="COM 端口:" Margin="0,0,0,5" />
-            <TextBox Text="{Binding ComPort, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="28" Padding="5" />
-        </StackPanel>
+            <TextBlock Grid.Row="2" Text="从站地址 (1-247):" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" Margin="0,0,10,10" />
+            <TextBox Grid.Row="2" Grid.Column="1" Height="28" Padding="5" Margin="0,0,0,10"
+                     Text="{Binding SlaveAddress, UpdateSourceTrigger=PropertyChanged}" />
 
-        <!-- 描述 -->
-        <StackPanel Grid.Row="6" Margin="0,0,0,10">
-            <TextBlock Text="描述（可选）:" Margin="0,0,0,5" />
-            <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="28" Padding="5" />
-        </StackPanel>
+            <TextBlock Grid.Row="3" Text="COM 端口:" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" Margin="0,0,10,10" />
+            <TextBox Grid.Row="3" Grid.Column="1" Height="28" Padding="5" Margin="0,0,0,10"
+                     Text="{Binding ComPort, UpdateSourceTrigger=PropertyChanged}" />
+
+            <TextBlock Grid.Row="4" Text="描述（可选）:" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" Margin="0,0,10,0" />
+            <TextBox Grid.Row="4" Grid.Column="1" Height="28" Padding="5"
+                     Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
+        </Grid>
+
+        <!-- 测点管理标题栏 -->
+        <Grid Grid.Row="2" Margin="0,15,0,8">
+            <TextBlock Text="测点列表（已有测点只读，可删除；新增行可直接填写）"
+                       VerticalAlignment="Center" Foreground="#666666" />
+            <Button Content="+ 添加测点" HorizontalAlignment="Right" Padding="10,3"
+                    Command="{Binding AddPointCommand}" />
+        </Grid>
+
+        <!-- 测点表格 -->
+        <DataGrid Grid.Row="3" ItemsSource="{Binding DataPoints}"
+                  Style="{StaticResource MinimalDataGridStyle}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False"
+                  HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="名称" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                     IsReadOnly="{Binding IsExisting}"
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="寄存器地址" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding RegisterAddress, UpdateSourceTrigger=PropertyChanged}"
+                                     IsReadOnly="{Binding IsExisting}"
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="寄存器类型" Width="150">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.RegisterTypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding RegisterType, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding IsNew}"
+                                      BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="数据类型" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.DataTypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding DataType, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding IsNew}"
+                                      BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="单位" Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Unit, UpdateSourceTrigger=PropertyChanged}"
+                                     IsReadOnly="{Binding IsExisting}"
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="操作" Width="70">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="删除" Padding="6,2" VerticalAlignment="Center"
+                                    Command="{Binding DataContext.DeletePointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
 
         <!-- 错误提示 -->
-        <TextBlock Grid.Row="7" Text="{Binding ErrorMessage}" 
-                   Foreground="Red" HorizontalAlignment="Center"
+        <TextBlock Grid.Row="4" Text="{Binding ErrorMessage}" Margin="0,8,0,0"
+                   Foreground="Red" HorizontalAlignment="Center" TextWrapping="Wrap"
                    Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
         <!-- 按钮 -->
-        <StackPanel Grid.Row="8" Orientation="Horizontal" 
+        <StackPanel Grid.Row="5" Orientation="Horizontal" 
                     HorizontalAlignment="Center" Margin="0,10,0,0">
             <Button Content="取消" Width="80" Height="30" Margin="5"
                     Command="{Binding CancelCommand}" />

@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Server.Infrastructure.Data;
 using Server.Infrastructure.Repositories;
 using Server.Models.Common;
 using Server.Models.Dtos;
@@ -11,12 +13,14 @@ namespace Server.Services
         private readonly IDataPointRepository _pointRepo;
         private readonly IDeviceRepository _deviceRepo;
         private readonly IMapper _mapper;
+        private readonly ModbusMonitorDbContext _context;
 
-        public DataPointService(IDataPointRepository repo, IDeviceRepository deviceRepo, IMapper mapper)
+        public DataPointService(IDataPointRepository repo, IDeviceRepository deviceRepo, IMapper mapper, ModbusMonitorDbContext context)
         {
             _pointRepo = repo;
             _deviceRepo = deviceRepo;
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<ApiResult<List<DataPointDto>>> GetByDeviceIdAsync(int deviceId)
@@ -62,8 +66,24 @@ namespace Server.Services
             if (point == null)
                 return ApiResult.Fail(404, "数据点不存在");
 
-            await _pointRepo.DeleteAsync(id);
-            await _pointRepo.SaveChangedAsync();
+            // 报警记录与历史数据都以 Restrict 外键引用测点，必须先清掉这些子记录，否则 DELETE 会触发外键冲突
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _context.Alarms.Where(a => a.DataPointId == id).ExecuteDeleteAsync();
+                await _context.DeviceDatas.Where(d => d.DataPointId == id).ExecuteDeleteAsync();
+
+                await _pointRepo.DeleteAsync(id);
+                await _pointRepo.SaveChangedAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
             return ApiResult.Success("删除成功");
         }
     }

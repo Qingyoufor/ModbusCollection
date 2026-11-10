@@ -1,4 +1,6 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Server.Infrastructure.Data;
 using Server.Infrastructure.Repositories;
 using Server.Models.Common;
 using Server.Models.Dtos;
@@ -10,11 +12,13 @@ namespace Server.Services
     {
         private readonly IDeviceRepository _deviceRepo;
         private readonly IMapper _mapper;
+        private readonly ModbusMonitorDbContext _context;
 
-        public DeviceService(IDeviceRepository deviceRepo, IMapper mapper)
+        public DeviceService(IDeviceRepository deviceRepo, IMapper mapper, ModbusMonitorDbContext context)
         {
             _deviceRepo = deviceRepo;
             _mapper = mapper;
+            _context = context;
         }
         public async Task<ApiResult<PagedResult<DeviceListItemDto>>> GetPagedAsync(int page, int pageSize)
         {
@@ -68,15 +72,31 @@ namespace Server.Services
 
         public async Task<ApiResult> DeleteAsync(int id)
         {
-            var device = await _deviceRepo.GetWithDetailsAsync(id);
+            // 不能用 GetWithDetailsAsync：它会把 DataPoints 一起放进追踪器，
+            // 而下面的 ExecuteDeleteAsync 绕过追踪器删行，之后 Remove(device) 会因必填外键被判为已断开而抛异常
+            var device = await _deviceRepo.GetByIdAsync(id);
             if (device == null)
                 return ApiResult.Fail(404, "设备不存在");
-            // 如果设备下有测点则不允许删除
-            if(device.DataPoints.Any())
-                return ApiResult.Fail(400, "该设备下存在测点配置，请先删除测点");
 
-            await _deviceRepo.DeleteAsync(id);
-            await _deviceRepo.SaveChangedAsync();
+            // 测点、报警、历史数据都以 Restrict 外键挂在设备/测点下，必须按依赖顺序先清子表再删设备
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _context.Alarms.Where(a => a.DeviceId == id).ExecuteDeleteAsync();
+                await _context.DeviceDatas.Where(d => d.DeviceId == id).ExecuteDeleteAsync();
+                await _context.DataPoints.Where(p => p.DeviceId == id).ExecuteDeleteAsync();
+
+                await _deviceRepo.DeleteAsync(id);
+                await _deviceRepo.SaveChangedAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
             return ApiResult.Success("删除成功");
         }
 

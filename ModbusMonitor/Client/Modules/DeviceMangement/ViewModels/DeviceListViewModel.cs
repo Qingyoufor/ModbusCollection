@@ -16,7 +16,7 @@ namespace Client.Modules.DeviceManagement.ViewModels
 		public string PageInfo => $"{pageIndex} / {maxPage}";
 
 		private int pageIndex = 1;
-		private int pageSize = 2;
+		private int pageSize = 10;
 		private int totalCount;
 		private int maxPage => (int)Math.Ceiling((double) totalCount / pageSize); 
 
@@ -119,9 +119,11 @@ namespace Client.Modules.DeviceManagement.ViewModels
 			var isDelete = MessageBox.Show("确定要删除该设备吗？此操作不可撤销", "确认删除", MessageBoxButton.OKCancel);
 			if (isDelete == MessageBoxResult.OK)
 			{
-				var success = await _deviceService.DeleteAsync((int)id);
-				if (success)
+				var error = await _deviceService.DeleteAsync((int)id);
+				if (error == null)
 					await LoadData();
+				else
+					MessageBox.Show(error, "删除失败", MessageBoxButton.OK, MessageBoxImage.Warning);
 			}
 		}
 

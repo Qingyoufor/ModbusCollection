@@ -40,15 +40,15 @@ namespace Client.Service
             return result?.Code == 200 ? result.Data : null;
         }
 
-        public async Task<bool> CreateAsync(CreateDeviceRequest request)
+        public async Task<DeviceDto?> CreateAsync(CreateDeviceRequest request)
         {
             var response = await _http.PostAsync("api/devices",request);
 
-            if(!response.IsSuccessStatusCode) return false;
+            if(!response.IsSuccessStatusCode) return null;
 
-            var result = await response.Content.ReadFromJsonAsync<ApiResult>(_jsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ApiResult<DeviceDto>>(_jsonOptions);
 
-            return result?.Code == 200;
+            return result?.Code == 200 ? result.Data : null;
         }
 
         public async Task<bool> UpdateAsync(int id, UpdateDeviceRequest request)
@@ -62,13 +62,17 @@ namespace Client.Service
             return result?.Code == 200;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        /// <summary>删除设备；成功返回 null，失败返回服务端给的原因</summary>
+        public async Task<string?> DeleteAsync(int id)
         {
             var response = await _http.DeleteAsync($"api/devices/{id}");
+
             if (!response.IsSuccessStatusCode)
-                return false;
+                return "删除失败，请稍后重试";
+
             var result = await response.Content.ReadFromJsonAsync<ApiResult>(_jsonOptions);
-            return result?.Code == 200;
+
+            return result?.Code == 200 ? null : (result?.Message ?? "删除失败");
         }
     }
 }
