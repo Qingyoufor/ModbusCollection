@@ -12,6 +12,35 @@
 - **认证**：JWT + 刷新令牌，前端 401 自动无感续期
 - **日志**：Serilog 结构化日志，控制台 + 按天滚动文件
 
+## 界面预览
+
+<table>
+  <tr>
+    <td><img src=".screenshots/login.png" width="420" alt="登录"></td>
+    <td><img src=".screenshots/realtime.png" width="420" alt="实时监控"></td>
+  </tr>
+  <tr>
+    <td align="center">登录</td>
+    <td align="center">实时监控（设备树 + 数值 + 趋势）</td>
+  </tr>
+  <tr>
+    <td><img src=".screenshots/device-list.png" width="420" alt="设备管理"></td>
+    <td><img src=".screenshots/alarm.png" width="420" alt="报警中心"></td>
+  </tr>
+  <tr>
+    <td align="center">设备管理</td>
+    <td align="center">报警中心</td>
+  </tr>
+  <tr>
+    <td><img src=".screenshots/history.png" width="420" alt="历史趋势"></td>
+    <td><img src=".screenshots/settings.png" width="420" alt="系统设置"></td>
+  </tr>
+  <tr>
+    <td align="center">历史趋势</td>
+    <td align="center">系统设置</td>
+  </tr>
+</table>
+
 ## 技术栈
 
 | 层 | 技术 |
