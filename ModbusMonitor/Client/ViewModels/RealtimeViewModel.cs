@@ -24,15 +24,19 @@ namespace Client.ViewModels
         // ======== 设备数据相关 ========
         private string _selectedDeviceName = string.Empty;
         private bool _isDeviceSelected;
-        private ObservableCollection<DataPointDisplayModel> _dataPoints = new();
+        // 主集合：保持服务端返回顺序，每秒就地更新同一个对象
+        private readonly ObservableCollection<DataPointDisplayModel> _dataPoints = new();
+        // 界面渲染集合：经搜索/仅看报警筛选并报警置顶排序；内容无变化时不重建
+        private readonly ObservableCollection<DataPointDisplayModel> _viewPoints = new();
+        private string _searchText = string.Empty;
+        private bool _onlyAlarms;
+        private DataPointDisplayModel? _selectedPoint;
 
         // ======== 趋势图相关 ========
         private const int MaxTrendPoints = 60;   // 1 秒 1 点 × 60 = 60 秒滚动窗口
         // 每个测点存带时间戳的点（DateTimePoint），固定 60 秒滚动窗口
         private readonly Dictionary<int, ObservableCollection<DateTimePoint>> _trendDataCollections = new();
         private int _selectedTrendPointId = -1;
-        private string _selectedTrendPoint = string.Empty;
-        private string[] _trendPointNames = Array.Empty<string>();
         private ISeries[] _trendSeries = Array.Empty<ISeries>();
         private Axis[] _trendYAxes;
         private Axis[] _trendXAxes = Array.Empty<Axis>();
@@ -174,44 +178,97 @@ namespace Client.ViewModels
             EnsureTimerStarted(); // 保证 1 秒轮询定时器运行
         }
 
-        /// <summary>首次选中设备时：初始化趋势图测点列表、数据集合、默认选中的第一个测点</summary>
+        /// <summary>首次选中设备时：为每个测点建趋势集合，并默认选中第一个测点</summary>
         private void InitializeTrendChart(RealtimeDeviceDataDto device)
         {
-            // 测点名称数组（ComboBox 数据源，避免绑定对象）
-            TrendPointNames = device.DataPoints.Select(p => p.Name).ToArray();
-
-            // 默认选中第一个测点（直接设字段避免触发 setter 中依赖 DataPoints 的逻辑）
-            _selectedTrendPoint = TrendPointNames[0];
-            RaisePropertyChanged(nameof(SelectedTrendPoint));
-            _selectedTrendPointId = device.DataPoints[0].DataPointId;
-
+            if (_dataPoints.Count == 0)
+                return;
 
             // 为每个测点创建独立的空数据集合，首个数据点由随后的 UpdateTrendCollections 统一追加
-            foreach (var point in device.DataPoints)
+            _trendDataCollections.Clear();
+            foreach (var point in _dataPoints)
             {
                 _trendDataCollections[point.DataPointId] = new ObservableCollection<DateTimePoint>();
             }
 
-            UpdateTrendSeries(); // 绑定 Series → 第一个测点的数据集合
+            // 先清空选中，强制走一遍 setter 重建 Series（否则引用相同会被跳过）
+            _selectedPoint = null;
+            RaisePropertyChanged(nameof(SelectedPoint));
+            SelectedPoint = _dataPoints[0]; // 由 setter 负责建 Series、X/Y 轴与阈值虚线
         }
 
-        /// <summary>更新卡片数值面板：清空后重新添加（保持集合引用不变，避免 ComboBox 绑定丢失）</summary>
+        /// <summary>
+        /// 就地同步测点：复用已有对象只改属性值，集合成员或顺序变化时才重排。
+        /// 每秒重建整块 UI 会导致滚动位置与选中态丢失，也会让虚拟化失效。
+        /// </summary>
         private void UpdateDataPoints(RealtimeDeviceDataDto device)
         {
-            DataPoints.Clear();
+            var existing = _dataPoints.ToDictionary(p => p.DataPointId);
+            var ordered = new List<DataPointDisplayModel>(device.DataPoints.Count);
+
             foreach (var p in device.DataPoints)
             {
-                DataPoints.Add(new DataPointDisplayModel
+                if (!existing.TryGetValue(p.DataPointId, out var vm))
                 {
-                    DataPointId = p.DataPointId,
-                    Name = p.Name,
-                    Value = p.Value,
-                    Unit = p.Unit,
-                    DecimalPlaces = p.DecimalPlaces,
-                    AlarmStatus = p.AlarmStatus,
-                    AlarmHigh = p.AlarmHigh,
-                    AlarmLow = p.AlarmLow
-                });
+                    vm = new DataPointDisplayModel { DataPointId = p.DataPointId };
+                }
+
+                vm.Name = p.Name;
+                vm.Value = p.Value;
+                vm.Unit = p.Unit;
+                vm.DecimalPlaces = p.DecimalPlaces;
+                vm.AlarmStatus = p.AlarmStatus;
+                vm.AlarmHigh = p.AlarmHigh;
+                vm.AlarmLow = p.AlarmLow;
+
+                ordered.Add(vm);
+            }
+
+            int before = _dataPoints.Count;
+
+            // 成员或顺序变化（新增测点、服务端改排序）才重排主集合
+            if (!ordered.SequenceEqual(_dataPoints))
+            {
+                _dataPoints.Clear();
+                foreach (var vm in ordered)
+                {
+                    _dataPoints.Add(vm);
+                }
+            }
+
+            // 选中测点被删除时回落到第一个测点（集合重排后引用会失效）
+            if (_dataPoints.Count > 0 && (_selectedPoint == null || !_dataPoints.Contains(_selectedPoint)))
+            {
+                SelectedPoint = _dataPoints[0];
+            }
+
+            RefreshViewPoints();
+
+            if (_dataPoints.Count != before)
+            {
+                RaisePropertyChanged(nameof(IsCardMode));
+                RaisePropertyChanged(nameof(IsTableMode));
+            }
+        }
+
+        /// <summary>按搜索词/仅看报警筛选并报警置顶排序；结果与当前可见集合一致时跳过，避免每秒重建</summary>
+        private void RefreshViewPoints()
+        {
+            string keyword = _searchText.Trim();
+
+            var desired = _dataPoints
+                .Where(p => !_onlyAlarms || p.IsAlarm)
+                .Where(p => keyword.Length == 0 || p.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p.IsAlarm ? 0 : 1)   // 稳定排序：报警项置顶，组内保持服务端顺序
+                .ToList();
+
+            if (desired.Count == _viewPoints.Count && desired.SequenceEqual(_viewPoints))
+                return;
+
+            _viewPoints.Clear();
+            foreach (var point in desired)
+            {
+                _viewPoints.Add(point);
             }
         }
 
@@ -243,11 +300,15 @@ namespace Client.ViewModels
         /// <summary>切换测点时重建 Series，绑定到对应测点的 ObservableCollection（不清空历史数据）</summary>
         private void UpdateTrendSeries()
         {
-            if (_selectedTrendPointId == -1)
+            if (_selectedPoint == null)
                 return;
 
-            var values = _trendDataCollections[_selectedTrendPointId];
-            var pointInfo = DataPoints.FirstOrDefault(p => p.DataPointId == _selectedTrendPointId);
+            // 服务端运行中新增的测点还没建集合时就地补一个，避免选中后曲线取不到数据
+            if (!_trendDataCollections.TryGetValue(_selectedPoint.DataPointId, out var values))
+            {
+                values = new ObservableCollection<DateTimePoint>();
+                _trendDataCollections[_selectedPoint.DataPointId] = values;
+            }
 
             // 顺序即图层：阈值虚线放最底层，数据曲线画在最上层，阈值恰好等于当前值时
             // 也不会把曲线染成橙红色（各测点曲线颜色保持一致）
@@ -258,7 +319,7 @@ namespace Client.ViewModels
                 new LineSeries<DateTimePoint>
                 {
                     Values = values,
-                    Name = pointInfo?.Name,
+                    Name = _selectedPoint.Name,
                     Stroke = new SolidColorPaint(TrendColor) { StrokeThickness = 2 },
                     // 曲线下方淡蓝渐变，增强“趋势”观感
                     Fill = new LinearGradientPaint(
@@ -272,7 +333,7 @@ namespace Client.ViewModels
                 }
             };
 
-            UpdateTrendTitle(pointInfo);
+            UpdateTrendTitle(_selectedPoint);
         }
 
         /// <summary>X 轴锁定为 60 秒窗口，起点是第一个数据点：刚打开时曲线从左往右长，不会一下铺满整张图</summary>
@@ -356,8 +417,7 @@ namespace Client.ViewModels
         /// <summary>更新报警阈值虚线：上下限画成横贯数据窗口的虚线（超出当前 Y 轴范围时不显示）</summary>
         private void UpdateThresholds()
         {
-            var pointInfo = DataPoints.FirstOrDefault(p => p.DataPointId == _selectedTrendPointId);
-            var data = _trendDataCollections.TryGetValue(_selectedTrendPointId, out var collection)
+            var data = _selectedPoint != null && _trendDataCollections.TryGetValue(_selectedPoint.DataPointId, out var collection)
                 ? collection
                 : null;
 
@@ -370,8 +430,8 @@ namespace Client.ViewModels
                 end = data[^1].DateTime;
             }
 
-            SetThreshold(_highThresholdSeries, _highThresholdPoints, pointInfo?.AlarmHigh, start, end);
-            SetThreshold(_lowThresholdSeries, _lowThresholdPoints, pointInfo?.AlarmLow, start, end);
+            SetThreshold(_highThresholdSeries, _highThresholdPoints, _selectedPoint?.AlarmHigh, start, end);
+            SetThreshold(_lowThresholdSeries, _lowThresholdPoints, _selectedPoint?.AlarmLow, start, end);
         }
 
         /// <summary>把一条阈值线拉到 [start, end] 区间</summary>
@@ -416,11 +476,16 @@ namespace Client.ViewModels
                 IsDeviceSelected = true;
                 _selectedDeviceId = device.Id;
 
-                // 切换设备 → 清空趋势图所有数据
+                // 切换设备 → 清空趋势图与测点集合所有数据
                 _trendDataCollections.Clear();
-                TrendPointNames = Array.Empty<string>();
-                SelectedTrendPoint = string.Empty;
+                _dataPoints.Clear();
+                _viewPoints.Clear();
+                _selectedPoint = null;
+                RaisePropertyChanged(nameof(SelectedPoint));
+                RaisePropertyChanged(nameof(IsCardMode));
+                RaisePropertyChanged(nameof(IsTableMode));
                 _selectedTrendPointId = -1;
+                TrendTitle = string.Empty;
                 _axisMin = double.NaN;
                 _axisMin = double.NaN;
                 _axisMax = double.NaN;
@@ -482,11 +547,39 @@ namespace Client.ViewModels
             set => SetProperty(ref _deviceGroupNodes, value);
         }
 
-        public ObservableCollection<DataPointDisplayModel> DataPoints
+        /// <summary>全部测点（服务端顺序）：测点选择器数据源，不受搜索/筛选影响</summary>
+        public ObservableCollection<DataPointDisplayModel> DataPoints => _dataPoints;
+
+        /// <summary>界面渲染的测点：已按搜索词/仅看报警筛选并报警置顶排序</summary>
+        public ObservableCollection<DataPointDisplayModel> ViewPoints => _viewPoints;
+
+        /// <summary>搜索关键字（按名称过滤）</summary>
+        public string SearchText
         {
-            get => _dataPoints;
-            set => SetProperty(ref _dataPoints, value);
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                    RefreshViewPoints();
+            }
         }
+
+        /// <summary>仅看报警</summary>
+        public bool OnlyAlarms
+        {
+            get => _onlyAlarms;
+            set
+            {
+                if (SetProperty(ref _onlyAlarms, value))
+                    RefreshViewPoints();
+            }
+        }
+
+        /// <summary>≤12 个测点用卡片，超过则自动切表格</summary>
+        public bool IsCardMode => _dataPoints.Count <= 12;
+
+        /// <summary>卡片模式的反向属性：>12 个测点用表格</summary>
+        public bool IsTableMode => !IsCardMode;
 
         public string SelectedDeviceName
         {
@@ -511,41 +604,31 @@ namespace Client.ViewModels
             }
         }
 
-        public string[] TrendPointNames
-        {
-            get => _trendPointNames;
-            set => SetProperty(ref _trendPointNames, value);
-        }
-
         /// <summary>
-        /// 当前选中的测点名称（ComboBox 绑定）
-        /// 切换时同步更新 _selectedTrendPointId、Series 数据源、Y 轴范围
+        /// 当前选中的测点（卡片/表格/测点下拉共用）。
+        /// 切换时同步更新 _selectedTrendPointId、Series 数据源、X/Y 轴与阈值虚线。
         /// </summary>
-        public string SelectedTrendPoint
+        public DataPointDisplayModel? SelectedPoint
         {
-            get => _selectedTrendPoint;
+            get => _selectedPoint;
             set
             {
-                if (_selectedTrendPoint != value)
-                {
-                    _selectedTrendPoint = value;
-                    RaisePropertyChanged();
+                // 筛选重排导致控件回传 null 时忽略，保持当前曲线不中断
+                if (value == null || ReferenceEquals(value, _selectedPoint))
+                    return;
 
-                    // 根据测点名称查找 ID，切换 Series 和 Y 轴
-                    var pointInfo = DataPoints.FirstOrDefault(p => p.Name == value);
-                    if (pointInfo != null)
-                    {
-                        _selectedTrendPointId = pointInfo.DataPointId;
-                        _axisMin = double.NaN;   // 换测点必须重算量程
-                        _axisMax = double.NaN;
-                        _axisXMin = long.MinValue;
-                        _axisXMax = long.MinValue;
-                        UpdateTrendSeries();     // 切换 Series 绑定的数据集合
-                        UpdateTrendXAxis();      // X 轴跟着新测点的数据区间
-                        UpdateTrendYAxis();      // 调整 Y 轴范围
-                        UpdateThresholds();      // 换测点的报警阈值不同
-                    }
-                }
+                _selectedPoint = value;
+                RaisePropertyChanged();
+
+                _selectedTrendPointId = value.DataPointId;
+                _axisMin = double.NaN;   // 换测点必须重算量程
+                _axisMax = double.NaN;
+                _axisXMin = long.MinValue;
+                _axisXMax = long.MinValue;
+                UpdateTrendSeries();     // 切换 Series 绑定的数据集合
+                UpdateTrendXAxis();      // X 轴跟着新测点的数据区间
+                UpdateTrendYAxis();      // 调整 Y 轴范围
+                UpdateThresholds();      // 换测点的报警阈值不同
             }
         }
 

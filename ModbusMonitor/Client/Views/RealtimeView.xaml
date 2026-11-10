@@ -55,169 +55,217 @@
             </TreeView>
         </DockPanel>
 
-        <!-- 右侧：实时数据卡片 + 趋势曲线 -->
+        <!-- 右侧：实时数据 + 趋势曲线 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            
-            <!--第一行：实时数据卡片（3 列，和初版一样的宽松排布）-->
-            <Grid Grid.Row="0" Margin="10,10,10,0">
-                <!-- 未选择设备时显示占位 -->
-                <TextBlock Text="请在左侧选择一个设备查看实时数据"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           Foreground="#999"
-                           Visibility="{Binding IsDeviceNotSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                <!-- 选中设备后显示数据 -->
-                <StackPanel Visibility="{Binding IsDeviceSelected,Converter={StaticResource BooleanToVisibilityConverter}}" >
-                    <!-- 设备标题栏 -->
-                    <TextBlock Text="{Binding SelectedDeviceName}" 
-                               FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+            <!-- 未选择设备时显示占位 -->
+            <TextBlock Grid.Row="0" Grid.RowSpan="2"
+                       Text="请在左侧选择一个设备查看实时数据"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="16"
+                       Foreground="#999"
+                       Visibility="{Binding IsDeviceNotSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                    <!-- 测点卡片列表 -->
-                    <ItemsControl ItemsSource="{Binding DataPoints}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="3" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-            
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="5" Padding="12" 
-                                        Background="#FAFAFA" 
-                                        BorderBrush="#E0E0E0" BorderThickness="1"
-                                        CornerRadius="4">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" 
-                                                   FontSize="12" Foreground="#666" Margin="0,0,0,6" />
-                            
-                                        <StackPanel Orientation="Horizontal">                           
-                                            <TextBlock Text="{Binding DisplayValue}" 
-                                                       FontSize="22" FontWeight="Bold">
-                                                <TextBlock.Foreground>
-                                                    <SolidColorBrush Color="{Binding ValueColor}" />
-                                                </TextBlock.Foreground>
-                                            </TextBlock>
-                                
-                                            <TextBlock Text="{Binding Unit}" 
-                                                       FontSize="12" Foreground="#999" 
-                                                       VerticalAlignment="Bottom" Margin="4,0,0,2" />
-                                        </StackPanel>
-                            
-                                        <!-- 报警状态指示 -->
-                                        <TextBlock Text="{Binding AlarmText}" 
-                                                   FontSize="10" Margin="0,4,0,0">
-                                            <TextBlock.Foreground>
-                                                <SolidColorBrush Color="{Binding AlarmColor}" />
-                                            </TextBlock.Foreground>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+            <!-- 设备标题 + 测点搜索/筛选 -->
+            <Grid Grid.Row="0" Margin="10,10,10,0"
+                  Visibility="{Binding IsDeviceSelected,Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding SelectedDeviceName}"
+                           FontSize="18" FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="搜索测点"
+                               VerticalAlignment="Center"
+                               Foreground="#666"
+                               Margin="0,0,8,0"/>
+
+                    <TextBox Width="150" Height="28"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <CheckBox Content="仅看报警"
+                              IsChecked="{Binding OnlyAlarms}"
+                              VerticalAlignment="Center"
+                              Margin="14,0,0,0"/>
                 </StackPanel>
             </Grid>
 
-            <!--第二行：实时趋势曲线-->
-            <Grid Grid.Row="1" Margin="10,12,10,10"
+            <!-- 数值区（上，限高可滚动） + 趋势区（下，常驻） -->
+            <Grid Grid.Row="1" Margin="10,8,10,10"
                   Visibility="{Binding IsDeviceSelected,Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="2*" MinHeight="130"/>
+                    <RowDefinition Height="3*" MinHeight="240"/>
                 </Grid.RowDefinitions>
 
-                <!-- 测点切换：胶囊按钮（扁平样式，选中蓝底白字） -->
-                <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
-                    <TextBlock Text="测点"
-                               VerticalAlignment="Center"
-                               Foreground="#666"
-                               Margin="0,0,10,0" />
+                <!-- 卡片模式：≤12 个测点 -->
+                <ListBox Grid.Row="0"
+                         ItemsSource="{Binding ViewPoints}"
+                         SelectedItem="{Binding SelectedPoint}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         Visibility="{Binding IsCardMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="3" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
 
-                    <ListBox ItemsSource="{Binding TrendPointNames}"
-                             SelectedItem="{Binding SelectedTrendPoint}"
-                             VerticalAlignment="Center"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter />
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
 
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Margin" Value="0,0,8,0"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="Bd" CornerRadius="14" Padding="14,6" Background="#F4F5F7">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="#E9EBEF"/>
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="#3B82F6"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="5" Padding="12" BorderThickness="1" CornerRadius="4">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#FAFAFA"/>
+                                        <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter Property="Background" Value="#F3F8FF"/>
+                                                <Setter Property="BorderBrush" Value="#3B82F6"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
 
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#444444"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox> 
-                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="12" Foreground="#666" Margin="0,0,0,6" />
 
-                <!-- 图表卡片：标题行 + 曲线，给最低高度免得窗口小时被压扁 -->
-                <Border Grid.Row="1" MinHeight="260"
-                        Background="White"
-                        BorderBrush="#ECECEC" BorderThickness="1"
-                        CornerRadius="8" Padding="16,12,16,4">
-                    <DockPanel>
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
-                            <TextBlock Text="{Binding TrendTitle}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
-                            <TextBlock Text="最近 60 秒 · 每秒刷新"
-                                       FontSize="11" Foreground="#999999"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DisplayValue}"
+                                                   FontSize="22" FontWeight="Bold">
+                                            <TextBlock.Foreground>
+                                                <SolidColorBrush Color="{Binding ValueColor}" />
+                                            </TextBlock.Foreground>
+                                        </TextBlock>
 
-                        <lvc:CartesianChart Series="{Binding TrendSeries}"
-                                            XAxes="{Binding TrendXAxes}"
-                                            YAxes="{Binding TrendYAxes}"
-                                            AnimationsSpeed="0:0:0.3"
-                                            TooltipPosition="Top"
-                                            TooltipTextSize="12"
-                                            TooltipTextPaint="{Binding TooltipTextPaint}"
-                                            TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"/>
-                    </DockPanel>
-                </Border>
+                                        <TextBlock Text="{Binding Unit}"
+                                                   FontSize="12" Foreground="#999"
+                                                   VerticalAlignment="Bottom" Margin="4,0,0,2" />
+                                    </StackPanel>
+
+                                    <!-- 报警状态指示 -->
+                                    <TextBlock Text="{Binding AlarmText}"
+                                               FontSize="10" Margin="0,4,0,0">
+                                        <TextBlock.Foreground>
+                                            <SolidColorBrush Color="{Binding AlarmColor}" />
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- 表格模式：>12 个测点 -->
+                <DataGrid Grid.Row="0"
+                          Style="{StaticResource MinimalDataGridStyle}"
+                          ItemsSource="{Binding ViewPoints}"
+                          SelectedItem="{Binding SelectedPoint}"
+                          Visibility="{Binding IsTableMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="测点名称" Binding="{Binding Name}" Width="*"/>
+
+                        <DataGridTemplateColumn Header="当前值" Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayValue}" FontSize="15" FontWeight="SemiBold">
+                                            <TextBlock.Foreground>
+                                                <SolidColorBrush Color="{Binding ValueColor}"/>
+                                            </TextBlock.Foreground>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Unit}" FontSize="11" Foreground="#999"
+                                                   VerticalAlignment="Bottom" Margin="4,0,0,2"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="状态" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StatusText}">
+                                        <TextBlock.Foreground>
+                                            <SolidColorBrush Color="{Binding AlarmColor}"/>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- 趋势区：测点选择 + 曲线 -->
+                <Grid Grid.Row="1" Margin="0,12,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 测点切换：可搜索下拉，与卡片/表格共用选中项 -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="测点"
+                                   VerticalAlignment="Center"
+                                   Foreground="#666"
+                                   Margin="0,0,10,0" />
+
+                        <ComboBox Width="220" Height="30"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding DataPoints}"
+                                  SelectedItem="{Binding SelectedPoint}"
+                                  DisplayMemberPath="Name"
+                                  IsTextSearchEnabled="True"/>
+                    </StackPanel>
+
+                    <!-- 图表卡片：标题行 + 曲线，给最低高度免得窗口小时被压扁 -->
+                    <Border Grid.Row="1" MinHeight="220"
+                            Background="White"
+                            BorderBrush="#ECECEC" BorderThickness="1"
+                            CornerRadius="8" Padding="16,12,16,4">
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                                <TextBlock Text="{Binding TrendTitle}"
+                                           FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
+                                <TextBlock Text="最近 60 秒 · 每秒刷新"
+                                           FontSize="11" Foreground="#999999"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <lvc:CartesianChart Series="{Binding TrendSeries}"
+                                                XAxes="{Binding TrendXAxes}"
+                                                YAxes="{Binding TrendYAxes}"
+                                                AnimationsSpeed="0:0:0.3"
+                                                TooltipPosition="Top"
+                                                TooltipTextSize="12"
+                                                TooltipTextPaint="{Binding TooltipTextPaint}"
+                                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"/>
+                        </DockPanel>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
     </Grid>
