@@ -18,16 +18,6 @@ namespace Client.Service
             _http = http;
         }
 
-        public async Task<List<AlarmDto>?> GetCurrentAlarmsAsync()
-        {
-            var response = await _http.GetAsync("api/alarms/current");
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            var result = await response.Content.ReadFromJsonAsync<ApiResult<List<AlarmDto>>>(_jsonOptions);
-            return result?.Code == 200 ? result.Data : null;
-        }
-
         public async Task<PagedResult<AlarmDto>?> GetHistoryAsync(int page, int pageSize, int? deviceId, string? status)
         {
             var url = $"api/alarms/history?page={page}&pageSize={pageSize}";

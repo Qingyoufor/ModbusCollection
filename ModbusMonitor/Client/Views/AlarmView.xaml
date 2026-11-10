@@ -33,12 +33,7 @@
                       SelectedItem="{Binding SelectedStatus}"
                       Margin="0,0,20,0"/>
 
-            <Button Content="查询历史"
-                    Command="{Binding LoadHistoryCommand}"
-                    Width="80"
-                    Margin="0,0,10,0"/>
-
-            <Button Content="刷新当前"
+            <Button Content="刷新"
                     Command="{Binding RefreshCurrentCommand}"
                     Width="80"/>
         </StackPanel>
@@ -67,18 +62,20 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <!--操作按钮 + 分页-->
+        <!--操作按钮 + 分页：两侧常驻，不被内容宽度挤掉-->
         <Grid Grid.Row="3" Margin="0,10,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="确认报警"
-                        Command="{Binding AcknowledgeCommand}"
-                        Width="100"
-                        Margin="0,0,10,0"/>
-            </StackPanel>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <!--分页控件（只在历史模式下显示）-->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                        Visibility="{Binding IsHistoryMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Button Grid.Column="0"
+                    Content="确认报警"
+                    Command="{Binding AcknowledgeCommand}"
+                    Width="100"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
                 <Button Content="上一页"
                         Command="{Binding PreviousPageCommand}"
                         Width="70"

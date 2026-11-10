@@ -14,14 +14,12 @@ namespace Client.ViewModels
         private AlarmDto? _selectedAlarm;
 
         private string _selectedStatus = "Unacknowledged";
-        private bool _isHistoryMode;
         private int _currentPage = 1;
         private int _totalPages = 1;
         private string _pageInfo = "第 1 页";
 
         // === View 命令 ===
         public DelegateCommand RefreshCurrentCommand { get; }
-        public DelegateCommand LoadHistoryCommand { get; }
         public DelegateCommand AcknowledgeCommand { get; }
         public DelegateCommand PreviousPageCommand { get; }
         public DelegateCommand NextPageCommand { get; }
@@ -34,14 +32,12 @@ namespace Client.ViewModels
         {
             _alarmService = alarmService;
 
-            RefreshCurrentCommand = new DelegateCommand(async () => await LoadCurrentAlarmsAsync());
-            LoadHistoryCommand = new DelegateCommand(async () => await LoadHistoryAlarmsAsync());
+            RefreshCurrentCommand = new DelegateCommand(async () => await LoadAlarmsAsync());
             AcknowledgeCommand = new DelegateCommand(async () => await AcknowledgeSelectedAlarmAsync(), CanAcknowledge);
             PreviousPageCommand = new DelegateCommand(async () => await PreviousPageAsync(), CanGoPrevious);
             NextPageCommand = new DelegateCommand(async () => await NextPageAsync(), CanGoNext);
 
-            // 初始加载当前报警
-            _ = LoadCurrentAlarmsAsync();
+            _ = LoadAlarmsAsync();
         }
 
         // === INavigationAware ===
@@ -51,40 +47,21 @@ namespace Client.ViewModels
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
-            // 每次导航进入时刷新当前报警
-            _ = LoadCurrentAlarmsAsync();
-        }
-
-        // === 加载当前报警 ===
-        private async Task LoadCurrentAlarmsAsync()
-        {
-            IsHistoryMode = false;
-            SelectedStatus = AlarmStatuses[1];
-            var alarms = await _alarmService.GetCurrentAlarmsAsync();
-            if (alarms != null)
-            {
-                Alarms = new ObservableCollection<AlarmDto>(alarms);
-            }
-        }
-
-        // === 加载历史报警 ===
-        private async Task LoadHistoryAlarmsAsync()
-        {
-            IsHistoryMode = true;
+            // 每次导航进入时回到第一页
             _currentPage = 1;
-            await LoadHistoryPageAsync();
+            _ = LoadAlarmsAsync();
         }
 
-        private async Task LoadHistoryPageAsync()
+        // === 按当前筛选加载一页报警 ===
+        private async Task LoadAlarmsAsync()
         {
-
             string? status = SelectedStatus == "全部" ? null : SelectedStatus;
 
             var result = await _alarmService.GetHistoryAsync(_currentPage, 10, null, status);
             if (result != null)
             {
                 Alarms = new ObservableCollection<AlarmDto>(result.Items);
-                _totalPages = (int)Math.Ceiling(result.TotalCount / 10.0);
+                _totalPages = Math.Max(1, (int)Math.Ceiling(result.TotalCount / 10.0));
                 PageInfo = $"第 {_currentPage}/{_totalPages} 页（共 {result.TotalCount} 条）";
 
                 // 更新按钮状态
@@ -102,11 +79,7 @@ namespace Client.ViewModels
             var success = await _alarmService.AcknowledgeAsync(SelectedAlarm.Id);
             if (success)
             {
-                // 刷新列表
-                if (IsHistoryMode)
-                    await LoadHistoryPageAsync();
-                else
-                    await LoadCurrentAlarmsAsync();
+                await LoadAlarmsAsync();
             }
         }
 
@@ -118,7 +91,7 @@ namespace Client.ViewModels
             if (_currentPage > 1)
             {
                 _currentPage--;
-                await LoadHistoryPageAsync();
+                await LoadAlarmsAsync();
             }
         }
 
@@ -127,7 +100,7 @@ namespace Client.ViewModels
             if (_currentPage < _totalPages)
             {
                 _currentPage++;
-                await LoadHistoryPageAsync();
+                await LoadAlarmsAsync();
             }
         }
 
@@ -159,15 +132,9 @@ namespace Client.ViewModels
                 if (SetProperty(ref _selectedStatus, value))
                 {
                     _currentPage = 1;
-                    _ = LoadHistoryPageAsync();  // 切换等级后重新加载
+                    _ = LoadAlarmsAsync();  // 切换状态后回到第一页重新加载
                 }
             }
-        }
-
-        public bool IsHistoryMode
-        {
-            get => _isHistoryMode;
-            set => SetProperty(ref _isHistoryMode, value);
         }
 
         public string PageInfo
