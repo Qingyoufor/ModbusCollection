@@ -63,15 +63,13 @@ namespace Server.Background
                     if (!pointData.TryGetValue(dataPoint.Id, out double currentValue))
                         continue;
 
-                    if (dataPoint.AlarmHigh.HasValue && currentValue > dataPoint.AlarmHigh)
+                    if (dataPoint.IsHighLimit(currentValue))
                     {
-                        // 检测高限报警
                         await CreateAlarmIfNotExistsAsync(
                             alarmRepo, deviceId, dataPoint, currentValue, AlarmType.HighLimit);
                     }
 
-                    // 检测低限报警
-                    if (dataPoint.AlarmLow.HasValue && currentValue < dataPoint.AlarmLow.Value)
+                    if (dataPoint.IsLowLimit(currentValue))
                     {
                         await CreateAlarmIfNotExistsAsync(
                             alarmRepo, deviceId, dataPoint, currentValue, AlarmType.LowLimit);
@@ -98,13 +96,10 @@ namespace Server.Background
             if (existAlarm != null)
                 return;  // 已存在未确认报警，不重复生成（去重）
 
-
-
             var alarm = new Alarm
             {
                 DeviceId = deviceId,
                 DataPointId = dataPoint.Id,
-
                 AlarmType = alarmType,
                 Message = $"{dataPoint.Name} {GetAlarmTypeText(alarmType)}报警（当前值: {currentValue:F2}, 阈值: {threshold:F2}）",
                 Value = currentValue,

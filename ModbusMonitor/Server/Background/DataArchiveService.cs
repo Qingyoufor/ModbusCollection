@@ -18,7 +18,6 @@ namespace Server.Background
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("历史数据归档服务启动");
-            await _systemConfigService.LoadAsync();   // 启动时加载配置
             while (!stoppingToken.IsCancellationRequested)
             {
                 try

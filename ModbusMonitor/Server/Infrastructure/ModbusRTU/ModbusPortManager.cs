@@ -66,7 +66,7 @@ namespace Server.Infrastructure.ModbusRTU
         }
 
         /// <summary>构建端口映射：从站端口 → 主站端口（来自 setting.json）</summary>
-        public Dictionary<string, string> BuildComMapping()
+        private Dictionary<string, string> BuildComMapping()
         {
             // PortMappings 在 setting.json 里是嵌套对象，缓存中以其 JSON 文本形式存储
             var json = _configService.GetValueStr("Modbus.PortMappings");

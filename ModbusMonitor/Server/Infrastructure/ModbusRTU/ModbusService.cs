@@ -39,9 +39,7 @@ namespace Server.Infrastructure.ModbusRTU
         {
             _logger.LogInformation("Modbus 采集服务启动中...");
 
-            // 1.加载设备配置
-            await _systemConfigService.LoadAsync();
-
+            // 1.加载设备配置（setting.json 已由 Program 在 app.Run 前加载进缓存）
             _modbusDevices = await _configLoader.LoadConfigsAsync();
             if (_modbusDevices.Count == 0)
                 _logger.LogWarning("未加载到任何设备配置，轮询循环将空转（可通过重载配置恢复采集）");

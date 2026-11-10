@@ -34,8 +34,6 @@ namespace Client.ViewModels
         private string _deviceDataDays = "30";
         private string _alarmDays = "30";
 
-        // ===== 日志 =====
-
         // ===== 关于 =====
         private SystemInfoDto _systemInfo = new();
 

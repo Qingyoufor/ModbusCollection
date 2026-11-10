@@ -1,5 +1,4 @@
 using Server.Infrastructure.ModbusRTU.Models;
-using Server.Models.Common;
 
 namespace Server.Infrastructure.ModbusRTU
 {
@@ -19,13 +18,13 @@ namespace Server.Infrastructure.ModbusRTU
             var groupStartAddr = sortedPoints[0].RegisterAddress;
             var groupPoints = new List<DataPointConfig> { sortedPoints[0] };
             var groupType = sortedPoints[0].RegisterType;
-            int expectedNextAddr = groupStartAddr + GetRegisterLength(sortedPoints[0]);
+            int expectedNextAddr = groupStartAddr + sortedPoints[0].RegisterLength;
 
             // 从第二个测点开始，断点才触发保存旧组、开新组
             for (int i = 1; i < sortedPoints.Count; i++)
             {
                 var point = sortedPoints[i];
-                int pointLength = GetRegisterLength(point);
+                int pointLength = point.RegisterLength;
 
                 // 连续判据：类型一致（决定功能码03/04，帧内不可混）且地址等于游标（DataType不参与分组，只影响游标步进）
                 if (point.RegisterType == groupType && point.RegisterAddress == expectedNextAddr)
@@ -63,9 +62,5 @@ namespace Server.Infrastructure.ModbusRTU
 
             return groups;
         }
-
-        /// <summary>单个测点占用的寄存器数：Int32/Float 占 2，其余占 1</summary>
-        private static int GetRegisterLength(DataPointConfig point)
-            => point.DataType == DataPointType.Int32 || point.DataType == DataPointType.Float ? 2 : 1;
     }
 }

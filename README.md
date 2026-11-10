@@ -6,7 +6,7 @@
 
 - **Modbus RTU 采集**：轮询多个从站设备，按寄存器区间合并读取，支持字节序、缩放系数、小数位解析
 - **实时监控**：设备树导航 + 实时数值面板 + LiveCharts2 实时趋势曲线
-- **报警系统**：高限/低限越限检测，按偏差程度分级，报警去重与确认
+- **报警系统**：高限/低限越限检测，报警去重与确认
 - **历史数据**：定期归档实时值入库，支持按设备/测点/时间段查询趋势，CSV 导出
 - **系统设置**：串口参数、端口映射、采集周期、数据保留天数（setting.json 配置，运行时可改热生效）
 - **认证**：JWT + 刷新令牌，前端 401 自动无感续期
@@ -43,7 +43,7 @@
     ├─ 实时监控页（设备树 + 数值面板 + 趋势曲线）
     ├─ 报警中心
     ├─ 历史趋势页
-    └─ 系统设置页（Modbus/数据保留/日志/关于）
+    └─ 系统设置页（Modbus 配置含数据保留、关于）
 ```
 
 ## 目录结构
@@ -58,12 +58,14 @@ ModbusMonitor/
 │   ├── ViewModels/                #   ViewModel
 │   └── Views/                     #   XAML 视图
 └── Server/                        # ASP.NET Core 后端
+    ├── Background/                #   后台服务（数据归档、报警检测）
     ├── Infrastructure/
+    │   ├── Auth/                  #   JWT 签发
     │   ├── Controllers/           #   API 控制器
     │   ├── Data/                  #   DbContext
-    │   ├── Mappings/              #   AutoMapper + JWT
+    │   ├── Mappings/              #   AutoMapper 映射
     │   ├── Middleware/            #   全局异常处理
-    │   ├── Modbus/                #   Modbus 采集 + 报警检测
+    │   ├── ModbusRTU/             #   Modbus 采集（端口/分组/解析/缓存）
     │   └── Repositories/          #   仓储层
     ├── Migrations/                #   EF Core 迁移
     ├── Models/                    #   实体 / DTO / 枚举
@@ -83,7 +85,7 @@ ModbusMonitor/
 
 ### 后端 Server
 ```bash
-cd Server
+cd ModbusMonitor/Server
 dotnet run
 # Swagger: http://localhost:5078/swagger
 ```
@@ -91,7 +93,7 @@ dotnet run
 
 ### 客户端 Client
 ```bash
-cd Client
+cd ModbusMonitor/Client
 dotnet run
 ```
 
@@ -122,18 +124,20 @@ dotnet run
 |---|---|---|
 | POST | `/api/auth/signIn` | 登录，签发 Token 对 |
 | POST | `/api/auth/refresh` | 刷新令牌 |
+| POST | `/api/auth/logout` | 登出 |
 | GET/POST/PUT/DELETE | `/api/devices`、`/api/dataPoints` | 基础 CRUD |
-| GET | `/api/realtime` | 全量实时数据 |
-| GET | `/api/alarms` | 报警记录（分页/筛选/确认） |
-| GET | `/api/history` | 历史趋势数据 |
+| GET | `/api/realtime/devices/all` | 全量实时数据（含报警状态） |
+| GET | `/api/alarms/current`、`/api/alarms/history` | 当前报警 / 历史报警（分页、筛选） |
+| PUT | `/api/alarms/{id}/acknowledge` | 确认报警 |
+| GET | `/api/history/data`、`/api/history/statistics`、`/api/history/export` | 趋势 / 统计 / CSV 导出 |
 | GET/PUT | `/api/system/settings` | 读取/保存系统配置 |
+| POST | `/api/system/modbus/reload` | 手动重载 Modbus |
 | GET | `/api/system/info` | 系统运行信息 |
-| GET | `/api/system/logs` | 最近日志 |
 
 统一返回格式：`{ "Code": 200, "Message": "...", "Data": ... }`。
 
 ## 配置说明与注意事项
 
-- **端口映射方向**：setting.json 中 `PortMappings` 为「从站 → 主站」；`ModbusPortManager` 会反转以「由从站端口找主站端口」。
+- **端口映射方向**：setting.json 中 `PortMappings` 为「从站 → 主站」，采集时按设备的从站端口查出对应主站端口并打开串口。
 - **地址换算**：数据库寄存器地址使用 PLC 绝对地址（Holding Register 40001 起），采集时自动换算为协议偏移。
 - **后台服务与作用域**：后台服务为单例，访问仓储时用 `IServiceScopeFactory` 手动建作用域，避免 DbContext 并发问题。

@@ -16,5 +16,8 @@ namespace Server.Infrastructure.ModbusRTU.Models
         public int DecimalPlaces { get; set; } = 0;     // 小数位数
         public double MinValue { get; set; }             // 最小值（范围校验）
         public double MaxValue { get; set; }             // 最大值（范围校验）
+
+        /// <summary>该测点占用的寄存器数：Int32/Float 占 2，其余占 1</summary>
+        public int RegisterLength => DataType is DataPointType.Int32 or DataPointType.Float ? 2 : 1;
     }
 }

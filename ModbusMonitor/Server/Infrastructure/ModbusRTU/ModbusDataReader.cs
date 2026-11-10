@@ -130,7 +130,7 @@ namespace Server.Infrastructure.ModbusRTU
                     int offset = point.RegisterAddress - group.StartAddress;
 
                     // 2. 根据数据类型确定需要的寄存器数量
-                    int registerCount = point.DataType == DataPointType.Int32 || point.DataType == DataPointType.Float ? 2 : 1;
+                    int registerCount = point.RegisterLength;
 
                     // 3. 提取测点对应的寄存器片段
                     var pointRegisters = new ushort[registerCount];

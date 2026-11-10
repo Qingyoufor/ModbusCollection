@@ -37,5 +37,11 @@ namespace Server.Models.Entities
         public int DecimalPlaces { get; set; } = 0;    // 小数位
 
         public int SortOrder { get; set; }             // 排序号（按此排序显示）
+
+        /// <summary>高限越限：配置了阈值且当前值大于阈值</summary>
+        public bool IsHighLimit(double value) => AlarmHigh.HasValue && value > AlarmHigh.Value;
+
+        /// <summary>低限越限：配置了阈值且当前值小于阈值</summary>
+        public bool IsLowLimit(double value) => AlarmLow.HasValue && value < AlarmLow.Value;
     }
 }

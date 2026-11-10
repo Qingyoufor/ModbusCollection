@@ -52,7 +52,7 @@ namespace Server.Services
                         AlarmHigh = point.AlarmHigh,
                         AlarmLow = point.AlarmLow,
                         DecimalPlaces = point.DecimalPlaces,
-                        AlarmStatus = DetermineAlarmStatus(value, point.AlarmHigh, point.AlarmLow)
+                        AlarmStatus = DetermineAlarmStatus(point, value)
                     });
                 }
 
@@ -90,7 +90,7 @@ namespace Server.Services
                     AlarmHigh = point.AlarmHigh,
                     AlarmLow = point.AlarmLow,
                     DecimalPlaces = point.DecimalPlaces,
-                    AlarmStatus = DetermineAlarmStatus(value, point.AlarmHigh, point.AlarmLow)
+                    AlarmStatus = DetermineAlarmStatus(point, value)
                 };
                 deviceDto.DataPoints.Add(pointDto);
             }
@@ -98,13 +98,9 @@ namespace Server.Services
             return ApiResult<RealtimeDeviceDataDto>.Success(deviceDto);
         }
 
-        private static string DetermineAlarmStatus(double value,double? alarmHigh,double? alarmLow)
-        {
-            if (alarmHigh.HasValue && value > alarmHigh)
-                return "High";
-            if (alarmLow.HasValue && value < alarmLow)
-                return "Low";
-            return "Normal";
-        }
+        private static string DetermineAlarmStatus(DataPoint point, double value)
+            => point.IsHighLimit(value) ? "High"
+             : point.IsLowLimit(value) ? "Low"
+             : "Normal";
     }
 }
