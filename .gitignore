@@ -1,0 +1,38 @@
+# 构建输出
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+publish/
+
+# Visual Studio / Rider / VS Code 本地文件
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 测试产物
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# 运行时日志（Serilog）
+logs/
+*.log
+
+# NuGet
+packages/
+*.nupkg
+
+# 本地临时文件
+*.tmp
+.tmp/
+.screenshots/.tmp/
+
+# 操作系统生成文件
+Thumbs.db
+Desktop.ini
+.DS_Store

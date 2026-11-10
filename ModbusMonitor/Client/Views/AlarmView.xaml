@@ -1,0 +1,95 @@
+<UserControl x:Class="Client.Views.AlarmView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:prism="http://prismlibrary.com/"
+             mc:Ignorable="d"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             Background="White"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>  <!--标题栏-->
+            <RowDefinition Height="auto"/>  <!--筛选控件-->
+            <RowDefinition Height="*"/>     <!--报警列表-->
+            <RowDefinition Height="auto"/>  <!--操作按钮 + 分页-->
+        </Grid.RowDefinitions>
+
+        <!--标题栏-->
+        <TextBlock Grid.Row="0"
+                   Text="报警中心"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Margin="0,0,0,10"/>
+
+        <!--筛选控件-->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+
+            <TextBlock Text="报警状态：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ComboBox Width="120"
+                      ItemsSource="{Binding AlarmStatuses}"
+                      SelectedItem="{Binding SelectedStatus}"
+                      Margin="0,0,20,0"/>
+
+            <Button Content="查询历史"
+                    Command="{Binding LoadHistoryCommand}"
+                    Width="80"
+                    Margin="0,0,10,0"/>
+
+            <Button Content="刷新当前"
+                    Command="{Binding RefreshCurrentCommand}"
+                    Width="80"/>
+        </StackPanel>
+
+        <!--报警列表（DataGrid）-->
+        <DataGrid Grid.Row="2"
+                  Style="{StaticResource MinimalDataGridStyle}"
+                  ItemsSource="{Binding Alarms}"
+                  SelectedItem="{Binding SelectedAlarm}"
+                  BorderThickness="1"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column">
+
+            <DataGrid.Columns>
+
+                <DataGridTextColumn Header="类型" Binding="{Binding AlarmType}" Width="80"/>
+                <DataGridTextColumn Header="设备" Binding="{Binding DeviceName}" Width="120"/>
+                <DataGridTextColumn Header="测点" Binding="{Binding DataPointName}" Width="120"/>
+                <DataGridTextColumn Header="触发值" Binding="{Binding Value, StringFormat=F2}" Width="80"/>
+                <DataGridTextColumn Header="阈值" Binding="{Binding Threshold, StringFormat=F2}" Width="80"/>
+                <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="100"/>
+                <DataGridTextColumn Header="发生时间" Binding="{Binding OccurredAt, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!--操作按钮 + 分页-->
+        <Grid Grid.Row="3" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="确认报警"
+                        Command="{Binding AcknowledgeCommand}"
+                        Width="100"
+                        Margin="0,0,10,0"/>
+            </StackPanel>
+
+            <!--分页控件（只在历史模式下显示）-->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                        Visibility="{Binding IsHistoryMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Button Content="上一页"
+                        Command="{Binding PreviousPageCommand}"
+                        Width="70"
+                        Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding PageInfo}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                <Button Content="下一页"
+                        Command="{Binding NextPageCommand}"
+                        Width="70"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

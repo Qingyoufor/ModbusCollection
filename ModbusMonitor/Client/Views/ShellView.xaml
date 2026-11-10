@@ -1,0 +1,29 @@
+<Window x:Class="Client.Views.ShellView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:prism="http://prismlibrary.com/"
+        prism:ViewModelLocator.AutoWireViewModel="True"
+        Title="工业设备生产与监控系统" Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.2*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ListBox Grid.Column="0"
+                 ItemsSource="{Binding MenuItems}"
+                 SelectedItem="{Binding SelectedMenuItem}"
+                 Background="White"
+                 BorderThickness="0">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Header}" Margin="10,8" FontSize="14" FontWeight="Bold" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>  
+        </ListBox>
+
+        <!-- 右侧内容区域 -->
+        <ContentControl Grid.Column="1" prism:RegionManager.RegionName="MainRegion"/>
+    </Grid>
+</Window>

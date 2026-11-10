@@ -1,0 +1,108 @@
+<UserControl x:Class="Client.Views.HistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:local="clr-namespace:Client.Models"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             mc:Ignorable="d"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             Background="White"
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：设备树 + 测点列表 -->
+        <DockPanel Grid.Column="0" Margin="5">
+            <TextBlock Text="设备导航" DockPanel.Dock="Top"
+                       FontSize="15" FontWeight="Bold" Margin="5"/>
+
+            <TreeView DockPanel.Dock="Top" Height="220"
+                      ItemsSource="{Binding DeviceGroupNodes}"
+                      BorderThickness="0">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="SelectedItemChanged">
+                        <i:InvokeCommandAction Command="{Binding SelectedItemChangedCommand}"
+                                               CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=TreeView}}"/>
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+
+                <TreeView.Resources>
+                    <HierarchicalDataTemplate DataType="{x:Type local:DeviceGroupNode}"
+                                              ItemsSource="{Binding Devices}">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                    </HierarchicalDataTemplate>
+
+                    <DataTemplate DataType="{x:Type local:DeviceTreeNode}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TreeView.Resources>
+            </TreeView>
+
+            <TextBlock Text="测点列表" FontSize="14" FontWeight="Bold" Margin="5,10,5,5" DockPanel.Dock="Top"/>
+            <ListBox ItemsSource="{Binding DataPoints}"
+                     SelectedItem="{Binding SelectedPoint}"
+                     DisplayMemberPath="Name"
+                     BorderThickness="0"/>
+        </DockPanel>
+
+        <!-- 右侧：查询条件 + 统计 + 趋势图 -->
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 查询条件 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="开始：" VerticalAlignment="Center"/>
+                <hc:DateTimePicker SelectedDateTime="{Binding StartTime}"
+                                   Width="170" Margin="0,0,10,0"/>
+
+                <TextBlock Text="结束：" VerticalAlignment="Center"/>
+                <hc:DateTimePicker SelectedDateTime="{Binding EndTime}"
+                                   Width="170" Margin="0,0,10,0"/>
+
+
+                <Button Content="查询" Command="{Binding QueryCommand}"
+                        Width="70" Margin="0,0,10,0"/>
+                <Button Content="导出 Excel" Command="{Binding ExportCommand}"
+                        Width="90"/>
+            </StackPanel>
+
+            <!-- 统计面板 -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="{Binding Statistics.Max, StringFormat='最大：{0:F2}'}"
+                           Margin="0,0,20,0" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Statistics.Min, StringFormat='最小：{0:F2}'}"
+                           Margin="0,0,20,0" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Statistics.Average, StringFormat='平均：{0:F2}'}"
+                           Margin="0,0,20,0" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Statistics.Count, StringFormat='点数：{0}'}"
+                           FontWeight="Bold"/>
+            </StackPanel>
+
+            <!-- 趋势图 -->
+            <Border Grid.Row="2" BorderBrush="#E0E0E0" BorderThickness="1">
+                <lvc:CartesianChart Series="{Binding TrendSeries}"
+                                    XAxes="{Binding TrendXAxes}"
+                                    YAxes="{Binding TrendYAxes}"/>
+            </Border>
+
+            <!-- 加载提示 -->
+            <TextBlock Grid.Row="3" Text="加载中..."
+                       Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+        </Grid>
+    </Grid>
+</UserControl>

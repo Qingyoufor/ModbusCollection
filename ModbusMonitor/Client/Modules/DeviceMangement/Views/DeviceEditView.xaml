@@ -1,0 +1,75 @@
+<UserControl x:Class="Client.Modules.DeviceMangement.Views.DeviceEditView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:prism="http://prismlibrary.com/"
+        prism:ViewModelLocator.AutoWireViewModel="True"
+        Background="White"
+        Height="500" Width="600">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="设备信息" 
+                   FontSize="18" FontWeight="Bold" 
+                   HorizontalAlignment="Center" Margin="0,0,0,15" />
+
+        <!-- 设备名称 -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="设备名称:" Margin="0,0,0,5" />
+            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="28" Padding="5" />
+        </StackPanel>
+
+        <!-- 设备编码 -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="设备编码:" Margin="0,0,0,5" />
+            <TextBox Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="28" Padding="5" />
+        </StackPanel>
+
+        <!-- 从站地址 -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,10">
+            <TextBlock Text="从站地址 (1-247):" Margin="0,0,0,5" />
+            <TextBox Text="{Binding SlaveAddress, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="28" Padding="5" />
+        </StackPanel>
+
+        <!-- COM 端口 -->
+        <StackPanel Grid.Row="5" Margin="0,0,0,10">
+            <TextBlock Text="COM 端口:" Margin="0,0,0,5" />
+            <TextBox Text="{Binding ComPort, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="28" Padding="5" />
+        </StackPanel>
+
+        <!-- 描述 -->
+        <StackPanel Grid.Row="6" Margin="0,0,0,10">
+            <TextBlock Text="描述（可选）:" Margin="0,0,0,5" />
+            <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="28" Padding="5" />
+        </StackPanel>
+
+        <!-- 错误提示 -->
+        <TextBlock Grid.Row="7" Text="{Binding ErrorMessage}" 
+                   Foreground="Red" HorizontalAlignment="Center"
+                   Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <!-- 按钮 -->
+        <StackPanel Grid.Row="8" Orientation="Horizontal" 
+                    HorizontalAlignment="Center" Margin="0,10,0,0">
+            <Button Content="取消" Width="80" Height="30" Margin="5"
+                    Command="{Binding CancelCommand}" />
+            <Button Content="保存" Width="80" Height="30" Margin="5"
+                    Command="{Binding SaveCommand}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

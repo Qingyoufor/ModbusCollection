@@ -1,0 +1,22 @@
+﻿<prism:PrismApplication x:Class="Client.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:prism="http://prismlibrary.com/">
+    <prism:PrismApplication.Resources>
+        <ResourceDictionary>
+            <!--自带的bool转换器-->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <!--自定义转换器-->
+           
+            <ResourceDictionary.MergedDictionaries>
+                <!--HandyControl-->
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
+                
+                <!--自定义样式-->
+                <ResourceDictionary Source="/Styles/DataGridStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+        </ResourceDictionary>
+    </prism:PrismApplication.Resources>
+</prism:PrismApplication>
