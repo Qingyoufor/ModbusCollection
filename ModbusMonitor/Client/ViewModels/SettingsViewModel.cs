@@ -41,6 +41,7 @@ namespace Client.ViewModels
 
         private bool _isLoading;
         private string _statusMessage = string.Empty;
+        private bool _isStatusError;
 
         public DelegateCommand SaveCommand { get; }
         public DelegateCommand ReloadModbusCommand { get; }
@@ -119,12 +120,16 @@ namespace Client.ViewModels
         {
             IsLoading = true;
             StatusMessage = string.Empty;
+            IsStatusError = false;
             try
             {
                 // 端口映射：从行列表反序列化为 {从站:主站} 字典 → JSON
                 var mappings = PortMappings
                     .Where(m => !string.IsNullOrWhiteSpace(m.SlaveCom) && !string.IsNullOrWhiteSpace(m.MasterCom))
                     .ToDictionary(m => m.SlaveCom.Trim(), m => m.MasterCom.Trim());
+
+                DeviceDataDays = NormalizeRetentionDays(DeviceDataDays);
+                AlarmDays = NormalizeRetentionDays(AlarmDays);
 
                 var settings = new List<SystemSettingsDto>
                 {
@@ -142,6 +147,7 @@ namespace Client.ViewModels
 
                 var ok = await _systemService.UpdateSettingsAsync(settings);
                 StatusMessage = ok ? "保存成功，Modbus 已重载" : "保存失败";
+                IsStatusError = !ok;
             }
             finally
             {
@@ -153,7 +159,12 @@ namespace Client.ViewModels
         {
             var ok = await _systemService.ReloadModbusAsync();
             StatusMessage = ok ? "Modbus 已重载" : "重载失败";
+            IsStatusError = !ok;
         }
+
+        /// <summary>保留天数只接受正整数，空值或 0 按 1 天处理</summary>
+        private static string NormalizeRetentionDays(string value) =>
+            int.TryParse(value, out var days) && days >= 1 ? days.ToString() : "1";
 
         private void RemoveMapping(object? parameter)
         {
@@ -180,6 +191,7 @@ namespace Client.ViewModels
         public string AlarmDays { get => _alarmDays; set => SetProperty(ref _alarmDays, value); }
         public SystemInfoDto SystemInfo { get => _systemInfo; set => SetProperty(ref _systemInfo, value); }
         public string StatusMessage { get => _statusMessage; set => SetProperty(ref _statusMessage, value); }
+        public bool IsStatusError { get => _isStatusError; set => SetProperty(ref _isStatusError, value); }
         public bool IsLoading
         {
             get => _isLoading;

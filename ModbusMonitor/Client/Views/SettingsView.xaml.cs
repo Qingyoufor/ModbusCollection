@@ -22,5 +22,37 @@ namespace Client.Views
         {
             InitializeComponent();
         }
+
+        /// <summary>保留天数只允许输入数字</summary>
+        private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            foreach (var ch in e.Text)
+            {
+                if (!char.IsDigit(ch))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>粘贴内容含非数字时整段拒绝</summary>
+        private void NumericTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            if (e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText)
+                && e.SourceDataObject.GetData(DataFormats.UnicodeText) is string text)
+            {
+                foreach (var ch in text)
+                {
+                    if (!char.IsDigit(ch))
+                    {
+                        e.CancelCommand();
+                        return;
+                    }
+                }
+                return;
+            }
+            e.CancelCommand();
+        }
     }
 }

@@ -8,106 +8,194 @@
              d:DesignHeight="600" d:DesignWidth="800">
 
     <Grid Margin="16">
-        <TabControl>
-            <!-- Tab1: Modbus 配置 -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0">
+            <!-- Tab1: Modbus 配置（含数据保留） -->
             <TabItem Header="Modbus 配置">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="8">
-                        <GroupBox Header="端口映射（从站 → 主站）">
+                    <StackPanel Margin="20,16">
+
+                        <!-- 端口映射 -->
+                        <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>
+                                <TextBlock Text="端口映射（从站 → 主站）" Style="{StaticResource SettingsSectionTitleStyle}"/>
                                 <ItemsControl ItemsSource="{Binding PortMappings}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                <TextBox Text="{Binding SlaveCom, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
-                                                <TextBlock Text=" → " VerticalAlignment="Center"/>
-                                                <TextBox Text="{Binding MasterCom, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
-                                                <Button Content="删除" Margin="12,0,0,0" Padding="6,2"
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <TextBox Width="100" Style="{StaticResource SettingsTextBoxStyle}"
+                                                         Text="{Binding SlaveCom, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBlock Text="→" Margin="10,0" VerticalAlignment="Center" Foreground="#9AA0A6"/>
+                                                <TextBox Width="100" Style="{StaticResource SettingsTextBoxStyle}"
+                                                         Text="{Binding MasterCom, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <Button Content="删除" Height="28" MinWidth="0" Padding="12,0" Margin="14,0,0,0"
+                                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
                                                         Command="{Binding DataContext.RemoveMappingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <Button Content="+ 添加映射" Command="{Binding AddMappingCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                                <Button Content="+ 添加映射" Height="28" HorizontalAlignment="Left" Margin="0,6,0,0"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Command="{Binding AddMappingCommand}"/>
                             </StackPanel>
-                        </GroupBox>
+                        </Border>
 
-                        <GroupBox Header="串口参数" Margin="0,12,0,0">
-                            <UniformGrid Columns="3">
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="波特率" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding BaudRate, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="数据位" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding DataBits, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="停止位 (One/Two)" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding StopBits, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="校验位 (None/Odd/Even)" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding Parity, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="读超时 (ms)" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding ReadTimeout, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Margin="4">
-                                    <TextBlock Text="写超时 (ms)" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding WriteTimeout, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                            </UniformGrid>
-                        </GroupBox>
+                        <!-- 串口参数：左标签、右输入，两列 -->
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="串口参数" Style="{StaticResource SettingsSectionTitleStyle}"/>
 
-                        <GroupBox Header="采集周期" Margin="0,12,0,0">
-                            <StackPanel Orientation="Horizontal" Margin="4">
-                                <TextBlock Text="轮询间隔 (ms)" VerticalAlignment="Center"/>
-                                <TextBox Text="{Binding PollIntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="100" Margin="12,0,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="波特率" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Margin="0,0,24,0" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding BaudRate, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="数据位" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding DataBits, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="停止位 (One/Two)" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Margin="0,0,24,0" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding StopBits, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="校验位 (None/Odd/Even)" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding Parity, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="读超时" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Margin="0,0,24,0" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding ReadTimeout, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="写超时" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding WriteTimeout, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <TextBlock Text="超时单位为毫秒（ms）。" Style="{StaticResource SettingsHintStyle}"/>
                             </StackPanel>
-                        </GroupBox>
+                        </Border>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                            <Button Content="重载 Modbus" Command="{Binding ReloadModbusCommand}" Width="110" Height="30" Margin="0,0,8,0"/>
-                            <Button Content="保存配置" Command="{Binding SaveCommand}" Width="110" Height="30"/>
-                        </StackPanel>
+                        <!-- 采集周期 -->
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="采集周期" Style="{StaticResource SettingsSectionTitleStyle}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="轮询间隔" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding PollIntervalMs, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="ms" VerticalAlignment="Center" Margin="8,0,0,0"
+                                               FontSize="13" Foreground="#6B7280"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 数据保留 -->
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="数据保留" Style="{StaticResource SettingsSectionTitleStyle}"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="历史数据保留天数" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                             DataObject.Pasting="NumericTextBox_Pasting"
+                                             Text="{Binding DeviceDataDays, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="天" VerticalAlignment="Center" Margin="8,0,0,0"
+                                               FontSize="13" Foreground="#6B7280"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="报警记录保留天数" Width="160" Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBox Width="110" Style="{StaticResource SettingsTextBoxStyle}"
+                                             PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                             DataObject.Pasting="NumericTextBox_Pasting"
+                                             Text="{Binding AlarmDays, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="天" VerticalAlignment="Center" Margin="8,0,0,0"
+                                               FontSize="13" Foreground="#6B7280"/>
+                                </StackPanel>
+
+                                <TextBlock Text="归档服务每 5 秒检查一次，超过保留天数的数据会被自动清理。"
+                                           Style="{StaticResource SettingsHintStyle}"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
-            <!-- Tab2: 数据保留 -->
-            <TabItem Header="数据保留">
-                <StackPanel Margin="8" Width="380" HorizontalAlignment="Left">
-                    <StackPanel Orientation="Horizontal" Margin="0,12">
-                        <TextBlock Text="历史数据保留天数" Width="140" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding DeviceDataDays, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,12">
-                        <TextBlock Text="报警记录保留天数" Width="140" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding AlarmDays, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-                    </StackPanel>
-                    <Button Content="保存" Command="{Binding SaveCommand}" Width="110" Height="30" HorizontalAlignment="Left" Margin="0,20,0,0"/>
-                    <TextBlock Text="归档服务每 5 秒检查一次，超过保留天数的数据会被自动清理。"
-                               Foreground="Gray" TextWrapping="Wrap" Margin="0,12,0,0"/>
-                </StackPanel>
-            </TabItem>
-
-            <!-- Tab3: 关于 -->
+            <!-- Tab2: 关于 -->
             <TabItem Header="关于">
-                <StackPanel Margin="20" Width="400" HorizontalAlignment="Left">
-                    <TextBlock Text="ModbusMonitor" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding SystemInfo.Version, StringFormat=版本：{0}}" Margin="0,20,0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.ServerStartedAtLocal, StringFormat=服务启动：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.UpTime, StringFormat=已运行：{0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.OnlineDeviceCount, StringFormat=在线设备：{0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.CachedPointCount, StringFormat=缓存测点：{0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.ModbusRunning, StringFormat=Modbus 状态：{0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.LastPollTimeLocal, StringFormat=最近轮询：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
-                    <Button Content="刷新" Command="{Binding LoadInfoCommand}" Width="90" Height="28" HorizontalAlignment="Left" Margin="0,16,0,0"/>
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20,16">
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="ModbusMonitor" FontSize="20" FontWeight="Bold" Foreground="#1F2329"/>
+                                <TextBlock Text="{Binding SystemInfo.Version, StringFormat=版本 {0}}"
+                                           FontSize="12" Foreground="#9AA0A6" Margin="0,4,0,18"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="服务启动" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.ServerStartedAtLocal, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="已运行" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.UpTime}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="在线设备" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.OnlineDeviceCount}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="缓存测点" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.CachedPointCount}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Modbus 状态" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.ModbusRunning}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <TextBlock Text="最近轮询" Width="100" HorizontalAlignment="Left"
+                                               Style="{StaticResource SettingsLabelStyle}"/>
+                                    <TextBlock Text="{Binding SystemInfo.LastPollTimeLocal, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
+                                               FontSize="13" Foreground="#1F2329" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <Button Content="刷新" Height="28" HorizontalAlignment="Left"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Command="{Binding LoadInfoCommand}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
+
+        <!-- 底部操作栏：左侧结果提示，右侧按钮 -->
+        <DockPanel Grid.Row="1" Margin="4,12,4,0" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="重载 Modbus" Margin="0,0,8,0"
+                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                        Command="{Binding ReloadModbusCommand}"/>
+                <Button Content="保存配置"
+                        Style="{StaticResource SettingsPrimaryButtonStyle}"
+                        Command="{Binding SaveCommand}"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource SettingsStatusTextStyle}"/>
+        </DockPanel>
     </Grid>
 </UserControl>
