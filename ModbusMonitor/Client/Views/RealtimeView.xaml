@@ -75,8 +75,7 @@
             <Grid Grid.Row="0" Margin="10,10,10,0"
                   Visibility="{Binding IsDeviceSelected,Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="{Binding SelectedDeviceName}"
-                           FontSize="18" FontWeight="Bold"
-                           VerticalAlignment="Center"/>
+                           Style="{StaticResource PageTitleStyle}" />
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock Text="搜索测点"
@@ -84,8 +83,7 @@
                                Foreground="#666"
                                Margin="0,0,8,0"/>
 
-                    <TextBox Width="150" Height="28"
-                             VerticalContentAlignment="Center"
+                    <TextBox Style="{StaticResource PointSearchBoxStyle}"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <CheckBox Content="仅看报警"
@@ -118,63 +116,46 @@
                     </ListBox.ItemsPanel>
 
                     <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <ContentPresenter />
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource PointCardItemStyle}"/>
                     </ListBox.ItemContainerStyle>
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="5" Padding="12" BorderThickness="1" CornerRadius="4">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="#FAFAFA"/>
-                                        <Setter Property="BorderBrush" Value="#E0E0E0"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-                                                <Setter Property="Background" Value="#F3F8FF"/>
-                                                <Setter Property="BorderBrush" Value="#3B82F6"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
+                            <Border Style="{StaticResource PointCardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="3"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="12" Foreground="#666" Margin="0,0,0,6" />
+                                    <!-- 选中态左侧主色条：隐藏时仍占位，内容不位移 -->
+                                    <Border Grid.Column="0" Style="{StaticResource PointCardAccentStyle}" Margin="0,0,9,0"/>
 
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding DisplayValue}"
-                                                   FontSize="22" FontWeight="Bold">
-                                            <TextBlock.Foreground>
-                                                <SolidColorBrush Color="{Binding ValueColor}" />
-                                            </TextBlock.Foreground>
-                                        </TextBlock>
+                                    <Grid Grid.Column="1">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
 
-                                        <TextBlock Text="{Binding Unit}"
-                                                   FontSize="12" Foreground="#999"
-                                                   VerticalAlignment="Bottom" Margin="4,0,0,2" />
-                                    </StackPanel>
+                                        <Grid Grid.Row="0">
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource PointCardNameStyle}"/>
+                                            <Border Style="{StaticResource PointCardBadgeStyle}" HorizontalAlignment="Right">
+                                                <TextBlock Text="{Binding StatusText}" Style="{StaticResource PointCardBadgeTextStyle}"/>
+                                            </Border>
+                                        </Grid>
 
-                                    <!-- 报警状态指示 -->
-                                    <TextBlock Text="{Binding AlarmText}"
-                                               FontSize="10" Margin="0,4,0,0">
-                                        <TextBlock.Foreground>
-                                            <SolidColorBrush Color="{Binding AlarmColor}" />
-                                        </TextBlock.Foreground>
-                                    </TextBlock>
-                                </StackPanel>
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                                                    VerticalAlignment="Center" Margin="0,6,0,0">
+                                            <TextBlock Text="{Binding DisplayValue}" Style="{StaticResource PointCardValueStyle}">
+                                                <TextBlock.Foreground>
+                                                    <SolidColorBrush Color="{Binding ValueColor}" />
+                                                </TextBlock.Foreground>
+                                            </TextBlock>
+
+                                            <TextBlock Text="{Binding Unit}" Style="{StaticResource PointCardUnitStyle}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -202,54 +183,42 @@
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <!-- 趋势区：测点选择 + 曲线 -->
-                <Grid Grid.Row="1" Margin="0,12,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <!-- 趋势区：测点选择并入标题行，整块高度留给曲线 -->
+                <Border Grid.Row="1" MinHeight="220" Margin="0,12,0,0"
+                        Style="{StaticResource ChartCardStyle}">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                    <!-- 测点切换：可搜索下拉，与卡片/表格共用选中项 -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="测点"
-                                   VerticalAlignment="Center"
-                                   Foreground="#666"
-                                   Margin="0,0,10,0" />
+                            <TextBlock Grid.Column="0" Text="{Binding TrendTitle}"
+                                       Style="{StaticResource ChartTitleStyle}"/>
 
-                        <ComboBox Width="220" Height="30"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding DataPoints}"
-                                  SelectedItem="{Binding SelectedPoint}"
-                                  DisplayMemberPath="Name"
-                                  TextSearch.TextPath="Name"
-                                  IsTextSearchEnabled="True"/>
-                    </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <!-- 测点切换：可搜索下拉，与卡片/表格共用选中项 -->
+                                <ComboBox Width="180" Height="28"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{Binding DataPoints}"
+                                          SelectedItem="{Binding SelectedPoint}"
+                                          DisplayMemberPath="Name"
+                                          TextSearch.TextPath="Name"
+                                          IsTextSearchEnabled="True"/>
+                                <TextBlock Text="最近 60 秒 · 每秒刷新" Style="{StaticResource ChartMetaStyle}"/>
+                            </StackPanel>
+                        </Grid>
 
-                    <!-- 图表卡片：标题行 + 曲线，给最低高度免得窗口小时被压扁 -->
-                    <Border Grid.Row="1" MinHeight="220"
-                            Background="White"
-                            BorderBrush="#ECECEC" BorderThickness="1"
-                            CornerRadius="8" Padding="16,12,16,4">
-                        <DockPanel>
-                            <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
-                                <TextBlock Text="{Binding TrendTitle}"
-                                           FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
-                                <TextBlock Text="最近 60 秒 · 每秒刷新"
-                                           FontSize="11" Foreground="#999999"
-                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <lvc:CartesianChart Series="{Binding TrendSeries}"
-                                                XAxes="{Binding TrendXAxes}"
-                                                YAxes="{Binding TrendYAxes}"
-                                                AnimationsSpeed="0:0:0.3"
-                                                TooltipPosition="Top"
-                                                TooltipTextSize="12"
-                                                TooltipTextPaint="{Binding TooltipTextPaint}"
-                                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"/>
-                        </DockPanel>
-                    </Border>
-                </Grid>
+                        <lvc:CartesianChart Series="{Binding TrendSeries}"
+                                            XAxes="{Binding TrendXAxes}"
+                                            YAxes="{Binding TrendYAxes}"
+                                            AnimationsSpeed="0:0:0.3"
+                                            TooltipPosition="Top"
+                                            TooltipTextSize="12"
+                                            TooltipTextPaint="{Binding TooltipTextPaint}"
+                                            TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"/>
+                    </DockPanel>
+                </Border>
             </Grid>
         </Grid>
     </Grid>
