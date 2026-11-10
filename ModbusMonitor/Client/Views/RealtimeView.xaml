@@ -182,41 +182,23 @@
 
                 <!-- 表格模式：>12 个测点 -->
                 <DataGrid Grid.Row="0"
-                          Style="{StaticResource MinimalDataGridStyle}"
+                          Style="{StaticResource PointTableDataGridStyle}"
                           ItemsSource="{Binding ViewPoints}"
                           SelectedItem="{Binding SelectedPoint}"
                           CanUserSortColumns="False"
                           Visibility="{Binding IsTableMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <DataGrid.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinScrollBarStyle}"/>
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="测点名称" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="测点名称" Binding="{Binding Name}" Width="*"
+                                            CellStyle="{StaticResource PointNameCellStyle}"/>
 
-                        <DataGridTemplateColumn Header="当前值" Width="160">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DisplayValue}" FontSize="15" FontWeight="SemiBold">
-                                            <TextBlock.Foreground>
-                                                <SolidColorBrush Color="{Binding ValueColor}"/>
-                                            </TextBlock.Foreground>
-                                        </TextBlock>
-                                        <TextBlock Text="{Binding Unit}" FontSize="11" Foreground="#999"
-                                                   VerticalAlignment="Bottom" Margin="4,0,0,2"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="当前值" Width="150"
+                                                CellTemplate="{StaticResource PointValueCellTemplate}"/>
 
-                        <DataGridTemplateColumn Header="状态" Width="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding StatusText}">
-                                        <TextBlock.Foreground>
-                                            <SolidColorBrush Color="{Binding AlarmColor}"/>
-                                        </TextBlock.Foreground>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="状态" Width="110"
+                                                CellTemplate="{StaticResource PointStatusCellTemplate}"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
