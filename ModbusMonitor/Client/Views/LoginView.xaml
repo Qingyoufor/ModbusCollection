@@ -4,7 +4,7 @@
         xmlns:prism="http://prismlibrary.com/"
         Title="Modbus - 登录" 
         Height="400" Width="600"
-        Background="#F5F6F8"
+        Background="#FFFFFF"
         WindowStartupLocation="CenterScreen">
     <!-- 表单列固定宽度并居中：窗口缩放不改变输入框宽度 -->
     <StackPanel Width="380" HorizontalAlignment="Center" VerticalAlignment="Center">
