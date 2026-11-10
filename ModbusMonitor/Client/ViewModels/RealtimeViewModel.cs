@@ -32,6 +32,11 @@ namespace Client.ViewModels
         private bool _onlyAlarms;
         private DataPointDisplayModel? _selectedPoint;
 
+        // ======== 并发/时序控制 ========
+        private bool _isLoading;             // 有请求在途：tick 直接跳过，避免重复追加
+        private int _deviceGeneration;       // 设备代际号：切换设备后丢弃在途的旧响应
+        private bool _pendingTrendInit;      // 切换设备时首帧被跳过，仍需初始化趋势图
+
         // ======== 趋势图相关 ========
         private const int MaxTrendPoints = 60;   // 1 秒 1 点 × 60 = 60 秒滚动窗口
         // 每个测点存带时间戳的点（DateTimePoint），固定 60 秒滚动窗口
@@ -156,24 +161,45 @@ namespace Client.ViewModels
         /// <param name="initializeTrend">首次加载需初始化趋势图配置</param>
         private async Task LoadDeviceDataAsync(bool initializeTrend = false)
         {
-            // 调用服务端实时数据 API
-            var device = await _realtimeService.GetDeviceDataAsync(_selectedDeviceId);
-            if (device == null)
+            // 上一次请求还在途时直接跳过，避免同一秒重复追加趋势点（60 秒窗口被压缩）
+            if (_isLoading)
                 return;
 
-            SelectedDeviceName = device.DeviceName;
-            UpdateDataPoints(device);       // 刷新卡片数值面板
-
-            // 首次选中设备时初始化趋势图（只执行一次）；放在数值填充之后，测点名和标题才取得到
-            if (initializeTrend)
+            _isLoading = true;
+            try
             {
-                InitializeTrendChart(device);
-            }
+                int generation = _deviceGeneration;
+                int deviceId = _selectedDeviceId;
 
-            UpdateTrendCollections(device); // 追加趋势图数据点
-            UpdateTrendXAxis();             // X 轴跟随数据区间，刻度从第一个点开始
-            UpdateTrendYAxis();             // 按最新数据重算 Y 轴范围（范围没变则跳过重建）
-            UpdateThresholds();             // 阈值虚线跟随数据窗口
+                // 调用服务端实时数据 API
+                var device = await _realtimeService.GetDeviceDataAsync(deviceId);
+
+                // 请求期间用户又切了设备：丢弃这台设备的过期响应，避免数据/标题串台
+                if (device == null || generation != _deviceGeneration)
+                    return;
+
+                SelectedDeviceName = device.DeviceName;
+                UpdateDataPoints(device);       // 刷新数值面板（就地更新）
+
+                // 首次选中设备时初始化趋势图（只执行一次）；放在数值填充之后，测点名和标题才取得到
+                bool needInit = initializeTrend || _pendingTrendInit;
+                if (needInit)
+                {
+                    _pendingTrendInit = false;
+                    InitializeTrendChart(device);
+                }
+
+                EnsureSelectedPoint();          // 没选中或选中项已被删除时回落到第一个测点
+
+                UpdateTrendCollections(device); // 追加趋势图数据点
+                UpdateTrendXAxis();             // X 轴跟随数据区间，刻度从第一个点开始
+                UpdateTrendYAxis();             // 按最新数据重算 Y 轴范围（范围没变则跳过重建）
+                UpdateThresholds();             // 阈值虚线跟随数据窗口
+            }
+            finally
+            {
+                _isLoading = false;
+            }
 
             EnsureTimerStarted(); // 保证 1 秒轮询定时器运行
         }
@@ -203,7 +229,13 @@ namespace Client.ViewModels
         /// </summary>
         private void UpdateDataPoints(RealtimeDeviceDataDto device)
         {
-            var existing = _dataPoints.ToDictionary(p => p.DataPointId);
+            // 用索引器逐项写入：即使服务端返回重复 DataPointId 也不会抛异常
+            var existing = new Dictionary<int, DataPointDisplayModel>();
+            foreach (var vm in _dataPoints)
+            {
+                existing[vm.DataPointId] = vm;
+            }
+
             var ordered = new List<DataPointDisplayModel>(device.DataPoints.Count);
 
             foreach (var p in device.DataPoints)
@@ -236,12 +268,6 @@ namespace Client.ViewModels
                 }
             }
 
-            // 选中测点被删除时回落到第一个测点（集合重排后引用会失效）
-            if (_dataPoints.Count > 0 && (_selectedPoint == null || !_dataPoints.Contains(_selectedPoint)))
-            {
-                SelectedPoint = _dataPoints[0];
-            }
-
             RefreshViewPoints();
 
             if (_dataPoints.Count != before)
@@ -251,7 +277,31 @@ namespace Client.ViewModels
             }
         }
 
-        /// <summary>按搜索词/仅看报警筛选并报警置顶排序；结果与当前可见集合一致时跳过，避免每秒重建</summary>
+        /// <summary>没有选中，或选中的测点已被服务端删除时，回落到第一个测点</summary>
+        private void EnsureSelectedPoint()
+        {
+            if (_dataPoints.Count == 0)
+            {
+                // 测点被删空：显式清掉选中，避免曲线停在已不存在的测点上
+                if (_selectedPoint != null)
+                {
+                    _selectedPoint = null;
+                    RaisePropertyChanged(nameof(SelectedPoint));
+                }
+                return;
+            }
+
+            if (_selectedPoint == null || !_dataPoints.Contains(_selectedPoint))
+            {
+                SelectedPoint = _dataPoints[0];
+            }
+        }
+
+        /// <summary>
+        /// 按搜索词/仅看报警筛选并报警置顶排序。
+        /// 用 Remove/Move/Insert 增量同步而不是 Clear+Add：后者会发出 Reset 通知，
+        /// 导致表格/列表的选中高亮与滚动位置全部丢失。
+        /// </summary>
         private void RefreshViewPoints()
         {
             string keyword = _searchText.Trim();
@@ -265,11 +315,42 @@ namespace Client.ViewModels
             if (desired.Count == _viewPoints.Count && desired.SequenceEqual(_viewPoints))
                 return;
 
-            _viewPoints.Clear();
-            foreach (var point in desired)
+            var keep = new HashSet<DataPointDisplayModel>(desired);
+
+            // 先移除不该显示的
+            for (int i = _viewPoints.Count - 1; i >= 0; i--)
             {
-                _viewPoints.Add(point);
+                if (!keep.Contains(_viewPoints[i]))
+                {
+                    _viewPoints.RemoveAt(i);
+                }
             }
+
+            // 再按目标顺序就位：已有的用 Move，缺的用 Insert
+            for (int i = 0; i < desired.Count; i++)
+            {
+                var item = desired[i];
+                if (i < _viewPoints.Count && ReferenceEquals(_viewPoints[i], item))
+                    continue;
+
+                int oldIndex = _viewPoints.IndexOf(item);
+                if (oldIndex >= 0)
+                    _viewPoints.Move(oldIndex, i);
+                else
+                    _viewPoints.Insert(i, item);
+            }
+
+            // 把选中项回推给控件：Move/Insert 本身会保留选中，
+            // 但选中项被筛掉、再恢复显示时控件已经自行清空了选中状态，
+            // 直接重发同一个值它不会认，必须先推 null 再推回原值
+            if (_selectedPoint != null && keep.Contains(_selectedPoint))
+            {
+                var selected = _selectedPoint;
+                _selectedPoint = null;
+                RaisePropertyChanged(nameof(SelectedPoint));
+                _selectedPoint = selected;
+            }
+            RaisePropertyChanged(nameof(SelectedPoint));
         }
 
         /// <summary>为所有测点追加新数值（滑动窗口：超出 MaxTrendPoints 时移除最早的数据点）</summary>
@@ -476,6 +557,10 @@ namespace Client.ViewModels
                 IsDeviceSelected = true;
                 _selectedDeviceId = device.Id;
 
+                // 换代：在途的旧设备响应回来后会被丢弃
+                _deviceGeneration++;
+                _pendingTrendInit = true;
+
                 // 切换设备 → 清空趋势图与测点集合所有数据
                 _trendDataCollections.Clear();
                 _dataPoints.Clear();
@@ -486,7 +571,6 @@ namespace Client.ViewModels
                 RaisePropertyChanged(nameof(IsTableMode));
                 _selectedTrendPointId = -1;
                 TrendTitle = string.Empty;
-                _axisMin = double.NaN;
                 _axisMin = double.NaN;
                 _axisMax = double.NaN;
                 _axisXMin = long.MinValue;
@@ -523,7 +607,15 @@ namespace Client.ViewModels
         /// <summary>定时器回调：每 1 秒刷新设备数据和趋势图（不重新初始化）</summary>
         private async void OnRefreshTick(object? sender, EventArgs e)
         {
-            await LoadDeviceDataAsync(initializeTrend: false);
+            try
+            {
+                await LoadDeviceDataAsync(initializeTrend: false);
+            }
+            catch (Exception ex)
+            {
+                // async void 里的异常会直接终结进程，这里兜住并记录
+                System.Diagnostics.Debug.WriteLine($"实时刷新失败: {ex}");
+            }
         }
 
         // ======== 定时器方法 ========

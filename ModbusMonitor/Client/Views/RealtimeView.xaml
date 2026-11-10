@@ -185,6 +185,7 @@
                           Style="{StaticResource MinimalDataGridStyle}"
                           ItemsSource="{Binding ViewPoints}"
                           SelectedItem="{Binding SelectedPoint}"
+                          CanUserSortColumns="False"
                           Visibility="{Binding IsTableMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="测点名称" Binding="{Binding Name}" Width="*"/>
@@ -238,6 +239,7 @@
                                   ItemsSource="{Binding DataPoints}"
                                   SelectedItem="{Binding SelectedPoint}"
                                   DisplayMemberPath="Name"
+                                  TextSearch.TextPath="Name"
                                   IsTextSearchEnabled="True"/>
                     </StackPanel>
 
