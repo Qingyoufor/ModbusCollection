@@ -63,7 +63,7 @@
                 <DataGridTextColumn Header="触发值" Binding="{Binding Value, StringFormat=F2}" Width="80"/>
                 <DataGridTextColumn Header="阈值" Binding="{Binding Threshold, StringFormat=F2}" Width="80"/>
                 <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="100"/>
-                <DataGridTextColumn Header="发生时间" Binding="{Binding OccurredAt, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="*"/>
+                <DataGridTextColumn Header="发生时间" Binding="{Binding OccurredAtLocal, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

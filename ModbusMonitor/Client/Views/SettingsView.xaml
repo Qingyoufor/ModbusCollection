@@ -99,12 +99,12 @@
                 <StackPanel Margin="20" Width="400" HorizontalAlignment="Left">
                     <TextBlock Text="ModbusMonitor" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding SystemInfo.Version, StringFormat=版本：{0}}" Margin="0,20,0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.ServerStartedAt, StringFormat=服务启动：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
+                    <TextBlock Text="{Binding SystemInfo.ServerStartedAtLocal, StringFormat=服务启动：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
                     <TextBlock Text="{Binding SystemInfo.UpTime, StringFormat=已运行：{0}}" Margin="0,4"/>
                     <TextBlock Text="{Binding SystemInfo.OnlineDeviceCount, StringFormat=在线设备：{0}}" Margin="0,4"/>
                     <TextBlock Text="{Binding SystemInfo.CachedPointCount, StringFormat=缓存测点：{0}}" Margin="0,4"/>
                     <TextBlock Text="{Binding SystemInfo.ModbusRunning, StringFormat=Modbus 状态：{0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding SystemInfo.LastPollTime, StringFormat=最近轮询：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
+                    <TextBlock Text="{Binding SystemInfo.LastPollTimeLocal, StringFormat=最近轮询：{0:yyyy-MM-dd HH:mm:ss}}" Margin="0,4"/>
                     <Button Content="刷新" Command="{Binding LoadInfoCommand}" Width="90" Height="28" HorizontalAlignment="Left" Margin="0,16,0,0"/>
                 </StackPanel>
             </TabItem>

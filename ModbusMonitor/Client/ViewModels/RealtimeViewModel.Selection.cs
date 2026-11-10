@@ -236,6 +236,10 @@ namespace Client.ViewModels
                 UpdateTrendXAxis();      // X 轴跟着新测点的数据区间
                 UpdateTrendYAxis();      // 调整 Y 轴范围
                 UpdateThresholds();      // 换测点的报警阈值不同
+
+                // 该测点还没有采样点（服务端运行中新增的测点）：立刻拉一次，不等下一次轮询
+                if (!_trendDataCollections.TryGetValue(value.DataPointId, out var trend) || trend.Count == 0)
+                    _ = LoadDeviceDataAsync();
             }
         }
     }

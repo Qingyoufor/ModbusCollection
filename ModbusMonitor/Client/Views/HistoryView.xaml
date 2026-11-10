@@ -18,18 +18,26 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 左侧：设备树 + 测点列表 -->
-        <DockPanel Grid.Column="0" Margin="5">
-            <TextBlock Text="设备导航" DockPanel.Dock="Top"
+        <!-- 左侧：设备树 + 测点列表（2:3 比例，各自滚动） -->
+        <Grid Grid.Column="0" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="3*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="设备导航"
                        FontSize="15" FontWeight="Bold" Margin="5"/>
 
-            <TreeView DockPanel.Dock="Top" Height="220"
+            <TreeView Grid.Row="1" Margin="0,0,0,4"
                       ItemsSource="{Binding DeviceGroupNodes}"
                       BorderThickness="0">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="SelectedItemChanged">
                         <i:InvokeCommandAction Command="{Binding SelectedItemChangedCommand}"
-                                               CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=TreeView}}"/>
+                                               CommandParameter="{Binding SelectedItem,RelativeSource={RelativeSource AncestorType=TreeView}}"/>
                     </i:EventTrigger>
                 </i:Interaction.Triggers>
 
@@ -47,12 +55,18 @@
                 </TreeView.Resources>
             </TreeView>
 
-            <TextBlock Text="测点列表" FontSize="14" FontWeight="Bold" Margin="5,10,5,5" DockPanel.Dock="Top"/>
-            <ListBox ItemsSource="{Binding DataPoints}"
+            <TextBlock Grid.Row="2" Text="测点列表" FontSize="14" FontWeight="Bold" Margin="5,10,5,5"/>
+
+            <TextBox Grid.Row="3" Height="28" Margin="5,0,5,5"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding PointSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <ListBox Grid.Row="4"
+                     ItemsSource="{Binding PointsView}"
                      SelectedItem="{Binding SelectedPoint}"
                      DisplayMemberPath="Name"
                      BorderThickness="0"/>
-        </DockPanel>
+        </Grid>
 
         <!-- 右侧：查询条件 + 统计 + 趋势图 -->
         <Grid Grid.Column="1" Margin="10">
@@ -63,40 +77,63 @@
                 <RowDefinition Height="auto"/>
             </Grid.RowDefinitions>
 
-            <!-- 查询条件 -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="开始：" VerticalAlignment="Center"/>
+            <!-- 查询条件：窄窗口下自动换行，避免右侧被截断 -->
+            <WrapPanel Grid.Row="0" Margin="0,0,0,4">
+                <TextBlock Text="开始：" VerticalAlignment="Center" Margin="0,0,0,6"/>
                 <hc:DateTimePicker SelectedDateTime="{Binding StartTime}"
-                                   Width="170" Margin="0,0,10,0"/>
+                                   Width="170" Margin="0,0,10,6"/>
 
-                <TextBlock Text="结束：" VerticalAlignment="Center"/>
+                <TextBlock Text="结束：" VerticalAlignment="Center" Margin="0,0,0,6"/>
                 <hc:DateTimePicker SelectedDateTime="{Binding EndTime}"
-                                   Width="170" Margin="0,0,10,0"/>
-
+                                   Width="170" Margin="0,0,10,6"/>
 
                 <Button Content="查询" Command="{Binding QueryCommand}"
-                        Width="70" Margin="0,0,10,0"/>
-                <Button Content="导出 Excel" Command="{Binding ExportCommand}"
-                        Width="90"/>
-            </StackPanel>
+                        Width="70" Margin="0,0,10,6"/>
+                <Button Content="导出 CSV" Command="{Binding ExportCommand}"
+                        Width="90" Margin="0,0,0,6"/>
+            </WrapPanel>
 
-            <!-- 统计面板 -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="{Binding Statistics.Max, StringFormat='最大：{0:F2}'}"
-                           Margin="0,0,20,0" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Statistics.Min, StringFormat='最小：{0:F2}'}"
-                           Margin="0,0,20,0" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Statistics.Average, StringFormat='平均：{0:F2}'}"
-                           Margin="0,0,20,0" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Statistics.Count, StringFormat='点数：{0}'}"
-                           FontWeight="Bold"/>
-            </StackPanel>
+            <!-- 快捷时间范围 + 统计面板 -->
+            <WrapPanel Grid.Row="1" Margin="0,0,0,6">
+                <Button Content="近 1 小时" Command="{Binding LastHourCommand}" Width="90" Margin="0,0,8,6"/>
+                <Button Content="今天" Command="{Binding TodayCommand}" Width="70" Margin="0,0,8,6"/>
+                <Button Content="近 7 天" Command="{Binding Last7DaysCommand}" Width="80" Margin="0,0,8,6"/>
 
-            <!-- 趋势图 -->
-            <Border Grid.Row="2" BorderBrush="#E0E0E0" BorderThickness="1">
-                <lvc:CartesianChart Series="{Binding TrendSeries}"
-                                    XAxes="{Binding TrendXAxes}"
-                                    YAxes="{Binding TrendYAxes}"/>
+                <TextBlock Text="{Binding MaxText}" FontSize="15" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="0,0,18,6"/>
+                <TextBlock Text="{Binding MinText}" FontSize="15" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="0,0,18,6"/>
+                <TextBlock Text="{Binding AverageText}" FontSize="15" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="0,0,18,6"/>
+                <TextBlock Text="{Binding CountText}" FontSize="15" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="0,0,0,6"/>
+            </WrapPanel>
+
+            <!-- 趋势图卡片：标题行 + 曲线 + 空状态提示 -->
+            <Border Grid.Row="2" MinHeight="220"
+                    Background="White"
+                    BorderBrush="#ECECEC" BorderThickness="1"
+                    CornerRadius="8" Padding="16,12,16,4">
+                <Grid>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="{Binding SelectedPoint.Name}"
+                                       FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
+                            <TextBlock Text="{Binding SelectedPoint.Unit}"
+                                       FontSize="11" Foreground="#999999"
+                                       VerticalAlignment="Bottom" Margin="6,0,0,2"/>
+                        </StackPanel>
+
+                        <lvc:CartesianChart Series="{Binding TrendSeries}"
+                                            XAxes="{Binding TrendXAxes}"
+                                            YAxes="{Binding TrendYAxes}"/>
+                    </DockPanel>
+
+                    <TextBlock Text="{Binding ChartHint}"
+                               FontSize="14" Foreground="#999999"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding IsChartEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </Grid>
             </Border>
 
             <!-- 加载提示 -->

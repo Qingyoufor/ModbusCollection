@@ -50,9 +50,12 @@ namespace Server.Infrastructure.Controllers
 
             foreach (var item in result.Data)
             {
+                // 库里存的是 UTC，且 datetime2 读回来 Kind 为 Unspecified，需先标记 UTC 再转本地
+                var recordedAt = DateTime.SpecifyKind(item.RecordedAt, DateTimeKind.Utc).ToLocalTime();
+
                 sb.AppendLine(
                     $"{EscapeCsv(item.DeviceName)},{EscapeCsv(item.DataPointName)}," +
-                    $"{item.RecordedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss},{item.Value}");
+                    $"{recordedAt:yyyy-MM-dd HH:mm:ss},{item.Value}");
             }
 
             // 前面加 BOM，让 Excel 打开 CSV 时正确识别 UTF-8 中文
